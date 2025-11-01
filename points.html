@@ -138,8 +138,10 @@
             <!-- 用户信息提示栏 -->
             <div class="bg-blue-50 border border-blue-100 rounded-md p-4 mb-8">
                 <p class="text-gray-700">账号：<span id="user-account" class="font-medium">未登录</span></p>
-                <p class="text-gray-700">当前积分：<span id="current-points" class="font-medium">0</span>（兑换后需保留 ≥ 4分）</p>
-                <p class="text-gray-700">可用兑换积分：<span id="available-points" class="font-medium text-green-600">0</span></p>
+                <p class="text-gray-700">可兑换积分：<span id="available-points" class="font-medium text-green-600">0</span>（兑换后需保留 ≥ 4分）</p>
+                <p class="text-gray-700">冷却积分：<span id="cooling-points" class="font-medium text-yellow-600">0</span>（<span id="cooldown-remaining" class="font-medium text-gray-600">--</span>后解锁）</p>
+                <!-- 保留一个隐藏的占位元素以避免旧代码引用报错（不显示给用户） -->
+                <span id="current-points" class="hidden"></span>
             </div>
             
             <!-- 微信收款码设置 -->
@@ -316,7 +318,8 @@
         // 当前登录用户
         let currentUser = null;
         let hasQrcode = false;
-        let userPoints = { current: 0, available: 0 };
+        let userPoints = { current: 0, available: 0, redeemable: 0, cooling: 0 };
+        let cooldownTimerId = null;
         
         // DOM元素
         const mobileMenuButton = document.getElementById('mobile-menu-button');
@@ -324,6 +327,8 @@
         const userAccount = document.getElementById('user-account');
         const currentPoints = document.getElementById('current-points');
         const availablePoints = document.getElementById('available-points');
+        const coolingPointsEl = document.getElementById('cooling-points');
+        const cooldownRemainingEl = document.getElementById('cooldown-remaining');
         const wechatQrcode = document.getElementById('wechat-qrcode');
         const qrcodeUploadSection = document.getElementById('qrcode-upload-section');
         const uploadPrompt = document.getElementById('upload-prompt');
@@ -546,6 +551,12 @@
                     showModalError('请输入有效的正整数积分数量');
                     return;
                 }
+                // 新增：校验不得超过可兑换积分（排除48小时冷却中的积分）
+                if (amount > (userPoints.redeemable || 0)) {
+                    const msg = `超过可兑换积分。当前可兑换：${userPoints.redeemable || 0}，冷却中：${userPoints.cooling || 0}`;
+                    showModalError(msg);
+                    return;
+                }
                 // 可选：前端校验兑换后保留≥4分
                 if ((userPoints.available - amount) < 4) {
                     showModalError('兑换后需保留 ≥ 4分，请调整兑换数量');
@@ -586,8 +597,54 @@
                     if (summary2) {
                         userPoints.current = summary2.total_earned || 0;
                         userPoints.available = summary2.available_points || 0;
-                        currentPoints.textContent = userPoints.current;
-                        availablePoints.textContent = userPoints.available;
+                        // 计算48小时冷却中的积分与可兑换积分
+                        try {
+                            const boundaryIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+                            const { data: recentEarns } = await supabase
+                                .from('points_transactions')
+                                .select('amount, type, created_at')
+                                .eq('user_id', currentUser.id)
+                                .eq('type', 'earn')
+                                .gte('created_at', boundaryIso);
+                            const coolingSum = Array.isArray(recentEarns) ? recentEarns.reduce((sum, r) => sum + (r.amount || 0), 0) : 0;
+                            userPoints.cooling = Math.min(coolingSum, userPoints.available);
+                            userPoints.redeemable = Math.max(0, userPoints.available - userPoints.cooling);
+                            if (currentPoints) currentPoints.textContent = userPoints.current;
+                            availablePoints.textContent = userPoints.redeemable;
+                            if (coolingPointsEl) coolingPointsEl.textContent = userPoints.cooling;
+                            if (cooldownRemainingEl) {
+                                if (Array.isArray(recentEarns) && recentEarns.length > 0) {
+                                    const now = Date.now();
+                                    const minRemainMs = recentEarns
+                                        .map(r => (new Date(r.created_at).getTime() + 48 * 60 * 60 * 1000) - now)
+                                        .filter(ms => ms > 0)
+                                        .reduce((min, ms) => Math.min(min, ms), Infinity);
+                                    if (isFinite(minRemainMs)) {
+                                        const hrs = Math.floor(minRemainMs / (60 * 60 * 1000));
+                                        const mins = Math.floor((minRemainMs % (60 * 60 * 1000)) / (60 * 1000));
+                                        const secs = Math.floor((minRemainMs % (60 * 1000)) / 1000);
+                                        cooldownRemainingEl.textContent = `${hrs}小时${mins}分${secs}秒`;
+                                    } else {
+                                        cooldownRemainingEl.textContent = '--';
+                                    }
+                                } else {
+                                    cooldownRemainingEl.textContent = '--';
+                                }
+                            }
+                        } catch (e) {
+                            // 回退：无法获取近期earn记录时，仅显示available作为可兑换积分
+                            userPoints.cooling = 0;
+                            userPoints.redeemable = userPoints.available;
+                            if (currentPoints) currentPoints.textContent = userPoints.current;
+                            availablePoints.textContent = userPoints.redeemable;
+                            if (coolingPointsEl) coolingPointsEl.textContent = 0;
+                            if (cooldownRemainingEl) cooldownRemainingEl.textContent = '--';
+                        }
+                        // 更新导航栏显示的是总可用积分（不区分冷却）
+                        const ptsEl = document.getElementById('user-points');
+                        const mPtsEl = document.getElementById('mobile-user-points');
+                        if (ptsEl) ptsEl.textContent = `积分：${userPoints.available}`;
+                        if (mPtsEl) mPtsEl.textContent = `积分：${userPoints.available}`;
                     }
                     fetchExchangeRecords();
                 } catch (error) {
@@ -773,9 +830,50 @@
                 if (summary) {
                     userPoints.current = summary.total_earned || 0;
                     userPoints.available = summary.available_points || 0;
-                    currentPoints.textContent = userPoints.current;
-                    availablePoints.textContent = userPoints.available;
-                    // 新增：填充导航栏积分
+                    // 计算48小时冷却中的积分与可兑换积分
+                    try {
+                        const boundaryIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+                        const { data: recentEarns } = await supabase
+                            .from('points_transactions')
+                            .select('amount, type, created_at')
+                            .eq('user_id', currentUser.id)
+                            .eq('type', 'earn')
+                            .gte('created_at', boundaryIso);
+                        const coolingSum = Array.isArray(recentEarns) ? recentEarns.reduce((sum, r) => sum + (r.amount || 0), 0) : 0;
+                        userPoints.cooling = Math.min(coolingSum, userPoints.available);
+                        userPoints.redeemable = Math.max(0, userPoints.available - userPoints.cooling);
+                        if (currentPoints) currentPoints.textContent = userPoints.current;
+                        availablePoints.textContent = userPoints.redeemable;
+                        if (coolingPointsEl) coolingPointsEl.textContent = userPoints.cooling;
+                        if (cooldownRemainingEl) {
+                            if (Array.isArray(recentEarns) && recentEarns.length > 0) {
+                                const now = Date.now();
+                                const minRemainMs = recentEarns
+                                    .map(r => (new Date(r.created_at).getTime() + 48 * 60 * 60 * 1000) - now)
+                                    .filter(ms => ms > 0)
+                                    .reduce((min, ms) => Math.min(min, ms), Infinity);
+                                if (isFinite(minRemainMs)) {
+                                    const hrs = Math.floor(minRemainMs / (60 * 60 * 1000));
+                                    const mins = Math.floor((minRemainMs % (60 * 60 * 1000)) / (60 * 1000));
+                                    const secs = Math.floor((minRemainMs % (60 * 1000)) / 1000);
+                                    cooldownRemainingEl.textContent = `${hrs}小时${mins}分${secs}秒`;
+                                } else {
+                                    cooldownRemainingEl.textContent = '--';
+                                }
+                            } else {
+                                cooldownRemainingEl.textContent = '--';
+                            }
+                        }
+                    } catch (e) {
+                        // 回退：无法获取近期earn记录时，仅显示available作为可兑换积分
+                        userPoints.cooling = 0;
+                        userPoints.redeemable = userPoints.available;
+                        if (currentPoints) currentPoints.textContent = userPoints.current;
+                        availablePoints.textContent = userPoints.redeemable;
+                        if (coolingPointsEl) coolingPointsEl.textContent = 0;
+                        if (cooldownRemainingEl) cooldownRemainingEl.textContent = '--';
+                    }
+                    // 新增：填充导航栏积分（显示总可用）
                     const ptsEl = document.getElementById('user-points');
                     const mPtsEl = document.getElementById('mobile-user-points');
                     if (ptsEl) ptsEl.textContent = `积分：${userPoints.available}`;

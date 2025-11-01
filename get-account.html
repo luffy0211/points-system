@@ -105,7 +105,7 @@
                 <!-- 基础账号 -->
                 <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
                     <div class="bg-blue-500 text-white p-4">
-                        <h3 class="text-xl font-bold">基础账号（每个账号2积分）</h3>
+                        <h3 class="text-xl font-bold">基础账号（每个账号消耗2积分）</h3>
                         <!-- 删除介绍文案 -->
                     </div>
                     <div class="p-5">
@@ -169,10 +169,11 @@
                     <i class="fa fa-info-circle text-blue-500 mr-2"></i> 账号说明
                 </h3>
                 <ul class="space-y-2 text-gray-700 list-disc pl-5">
-                    <li>每个用户每次可获取1个账号，有效期根据账号类型而定</li>
-                    <li>账号信息请妥善保管，刷新页面后仍可在历史记录中查看</li>
+                    <li>取号前务必阅读并遵守号要求</li>
+                    <li>严格按照要求进行，如果不符合要求，网站不回收，后果自负</li>
+                    <li>高级账号尚未开放，后续期待</li>
+                    <li>基础账号每个账号获取消耗2积分</li>
                     <li>使用完毕请及时回收账号，以便他人使用</li>
-                    <li>违规使用将导致账号被收回并限制获取权限</li>
                 </ul>
             </div>
         </div>
@@ -224,7 +225,7 @@
             </div>
             <div class="p-4 overflow-y-auto" style="max-height:70vh;">
                 <header class="mb-4">
-                    <h1 class="text-2xl font-bold">SESO三角洲 打之前必看！！！！</h1>
+                    <h1 class="text-2xl font-bold">LEAL三角洲 打之前必看！！！！</h1>
                 </header>
                 <section class="mb-6">
                     <h2 class="text-xl font-semibold mb-2">《正常回收》标准：</h2>
@@ -254,7 +255,7 @@
                         <li>非必要禁止进入机密地图！！！进入机密地图完成任务，绝对禁止击杀玩家</li>
                     </ul>
                     <h3 class="text-lg font-medium mt-4">⚡ 推荐任务完成方式：</h3>
-                    <p class="text-gray-700">建议通过快速完成部门任务达到30级，熟练了一般都在四五个小时。<br>注意尽量不要打真人 不能超过40！！！</p>
+                    <p class="text-gray-700">建议通过快速完成部门任务达到30级，熟练了一般都在四五个小时。<br>注意尽量不要打真人 总干员击杀数量不能超过40！！！</p>
                     <div class="text-xs text-gray-500 my-4">本地示例截图已移除，请使用存储URL。</div>
                     <h3 class="text-lg font-medium mt-4">🧭 任务执行注意事项：</h3>
                     <ul class="list-disc pl-5 space-y-1">
@@ -263,6 +264,7 @@
                             <ul class="list-disc pl-5 space-y-1">
                                 <li>→ 尽量避免与玩家交战；</li>
                                 <li>→ 尽量不攻击真人玩家；</li>
+                                <li>→ 不能打绝密，不能打绝密，不能打绝密；</li>
                                 <li>→ 如击败真人，总击杀数请勿超过40。</li>
                             </ul>
                         </li>
@@ -555,6 +557,33 @@
             if (available < 2) {
                 showToast('积分不足，至少需要 2 积分才能取号', 'error');
                 return;
+            }
+
+            // 0.1 取号冷却检查：3小时间隔
+            try {
+                const { data: lastHist } = await supabaseClient
+                    .from('account_history')
+                    .select('get_time')
+                    .eq('user_id', currentUser.id)
+                    .order('get_time', { ascending: false })
+                    .limit(1);
+                const lastGetTime = lastHist && lastHist.length > 0 ? new Date(lastHist[0].get_time) : null;
+                if (lastGetTime) {
+                    const now = Date.now();
+                    const diffMs = now - lastGetTime.getTime();
+                    const cooldownMs = 3 * 60 * 60 * 1000;
+                    if (diffMs < cooldownMs) {
+                        const remainingMs = cooldownMs - diffMs;
+                        const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+                        const minutes = Math.floor((remainingMs % (60 * 60 * 1000)) / (60 * 1000));
+                        const seconds = Math.floor((remainingMs % (60 * 1000)) / 1000);
+                        const msg = `取号冷却中：请 ${hours}小时${minutes}分${seconds}秒 后再试`;
+                        showToast(msg, 'warning');
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.warn('冷却检查失败（忽略）:', e?.message || e);
             }
     
             // 1. 调用存储过程（原子化获取账号，避免并发重复）
