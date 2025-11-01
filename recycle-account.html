@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号回收 - LEAL账号报单系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 上传区域核心样式 */
+        .upload-container {
+            position: relative;
+            overflow: hidden;
+        }
+        #screenshot-upload {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .upload-overlay {
+            position: relative;
+            z-index: 1;
+        }
+        .level-option input:checked + span {
+            border-color: #3B82F6;
+            background-color: #EFF6FF;
+        }
+        /* 提示消息样式 */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .toast.success {
+            background-color: #10B981;
+        }
+        .toast.error {
+            background-color: #EF4444;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav id="navbar" class="bg-blue-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-xl font-bold">LEAL账号报单系统</a>
+            
+            <!-- 桌面导航 -->
+            <div class="hidden md:flex space-x-6">
+                <a href="index.html" class="hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="hover:text-blue-200 transition font-semibold border-b-2 border-white">账号回收</a>
+                <a href="points.html" class="hover:text-blue-200 transition">积分兑换</a>
+                <div id="auth-links">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-button" class="md:hidden text-white focus:outline-none">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="md:hidden hidden bg-blue-700">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                <a href="index.html" class="py-2 hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="py-2 hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="py-2 hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="py-2 hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="py-2 hover:text-blue-200 transition font-semibold">账号回收</a>
+                <a href="points.html" class="py-2 hover:text-blue-200 transition">积分兑换</a>
+                <div id="mobile-auth-links" class="py-2">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 联系客服模态框 -->
+    <div id="contact-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-80 p-6 relative">
+            <button id="contact-modal-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                <i class="fa fa-times"></i>
+            </button>
+            <h3 class="text-lg font-semibold mb-2">联系客服</h3>
+            <p class="text-gray-700">微信：<span class="font-mono font-bold text-blue-600">EACS12138</span></p>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button id="contact-modal-copy" class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">复制微信</button>
+                <button id="contact-modal-ok" class="border px-3 py-1.5 rounded hover:bg-gray-50">知道了</button>
+            </div>
+        </div>
+    </div>
+ 
+     <!-- 公告模态框 -->
+     <div id="announcement-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+         <div class="bg-white rounded-lg shadow-xl w-96 p-6 relative">
+             <button id="announcement-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                 <i class="fa fa-times"></i>
+             </button>
+             <h3 class="text-lg font-semibold mb-3">公告</h3>
+             <p class="text-gray-700 leading-relaxed">
+                 三角洲行情大跌，价格持续下减，对价格进行调整，等待市场回暖会相应提高价格
+             </p>
+             <div class="mt-6 flex justify-end">
+                 <button id="announcement-ack" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">我已知晓</button>
+             </div>
+         </div>
+     </div>
+ 
+     <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-bold text-gray-800">账号回收</h1>
+                <p class="text-gray-600 mt-2">提交您不再需要的账号，获得相应积分奖励</p>
+            </div>
+            
+            <!-- 回收表单 -->
+            <div class="bg-white rounded-lg shadow-md p-6 md:p-8 mb-12">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">账号信息提交</h2>
+                
+                <form id="recycle-form" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="account-username" class="block text-gray-700 font-medium mb-2">Steam账号 <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                    <i class="fa fa-user"></i>
+                                </span>
+                                <input type="text" id="account-username" name="account-username" 
+                                    class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                    placeholder="请输入Steam账号" required>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="account-password" class="block text-gray-700 font-medium mb-2">Steam密码 <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                    <i class="fa fa-lock"></i>
+                                </span>
+                                <input type="text" id="account-password" name="account-password" 
+                                    class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                    placeholder="请输入密码" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-3">账号等级 <span class="text-red-500">*</span></label>
+                        <div class="flex flex-wrap gap-4">
+                            <label class="level-option cursor-pointer">
+                                <input type="radio" name="account-level" value="30" class="hidden" required>
+                                <span class="inline-flex items-center justify-center w-24 h-12 border-2 border-gray-300 rounded-md transition">
+                                    30级
+                                </span>
+                            </label>
+                            <label class="level-option cursor-pointer">
+                                <input type="radio" name="account-level" value="33" class="hidden">
+                                <span class="inline-flex items-center justify-center w-24 h-12 border-2 border-gray-300 rounded-md transition">
+                                    33级
+                                </span>
+                            </label>
+                            <label class="level-option cursor-pointer">
+                                <input type="radio" name="account-level" value="other" class="hidden">
+                                <span class="inline-flex items-center justify-center w-24 h-12 border-2 border-gray-300 rounded-md transition">
+                                    其他
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="haf-coin" class="block text-gray-700 font-medium mb-2">哈夫币数量（单位W） <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i class="fa fa-diamond"></i>
+                            </span>
+                            <input type="number" id="haf-coin" name="haf-coin" min="1000" 
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="请输入哈夫币数量（不少于1000）" required>
+                            <div id="haf-coin-error" class="text-red-500 text-sm mt-1 hidden">
+                                哈夫币数量不能少于1000
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 上传区域 -->
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">账号截图 <span class="text-red-500">*</span></label>
+                        <p class="text-gray-500 text-sm mb-3">请上传5-6张账号相关截图（所有截图必须漏出uid，否则无效）</p>
+                        
+                        <label for="screenshot-upload" class="upload-container block border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer">
+                            <input type="file" id="screenshot-upload" accept="image/*" multiple class="" />
+                            
+                            <div class="upload-overlay">
+                                <div class="space-y-2">
+                                    <i class="fa fa-cloud-upload text-4xl text-gray-400"></i>
+                                    <p class="text-gray-600">点击或拖拽文件到此处上传</p>
+                                    <p class="text-gray-500 text-sm">支持JPG、PNG格式，单张不超过5MB</p>
+                                </div>
+                                
+                                <div id="upload-preview" class="mt-4 hidden">
+                                    <div class="flex flex-wrap gap-2">
+                                        <!-- 预览图将在这里显示 -->
+                                    </div>
+                                    <p id="file-count" class="text-gray-500 text-sm mt-2"></p>
+                                </div>
+                            </div>
+                        </label>
+                        <div id="screenshot-error" class="text-red-500 text-sm mt-1 hidden">
+                            请上传5-6张截图
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="recycle-remark" class="block text-gray-700 font-medium mb-2">备注信息（可选）</label>
+                        <textarea id="recycle-remark" name="recycle-remark" rows="3"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                            placeholder="请输入账号的特殊说明、使用情况等信息"></textarea>
+                    </div>
+                    
+                    <div class="pt-4">
+                        <button type="submit" id="submit-recycle"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md transition flex items-center justify-center">
+                            <span>提交回收申请</span>
+                            <i class="fa fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- 提交状态提示 -->
+                <div id="recycle-loading" class="mt-4 text-center hidden">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                    <p class="mt-2 text-gray-600">提交中，请稍候...</p>
+                </div>
+                <div id="recycle-success" class="mt-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md hidden">
+                    <p class="flex items-center">
+                        <i class="fa fa-check-circle mr-2"></i>
+                        回收申请提交成功！我们将在1-2个工作日内完成审核
+                    </p>
+                </div>
+                <div id="recycle-error" class="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md hidden">
+                    <p class="flex items-center">
+                        <i class="fa fa-times-circle mr-2"></i>
+                        <span id="error-message"></span>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- 回收记录 -->
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">我的回收记录</h2>
+                
+                <div id="records-loading" class="text-center py-10">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                    <p class="mt-2 text-gray-600">加载记录中...</p>
+                </div>
+                
+                <div id="no-records" class="text-center py-10 bg-white rounded-lg shadow-md hidden">
+                    <i class="fa fa-folder-open text-5xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500">暂无回收记录</p>
+                    <p class="text-gray-400 mt-2">提交账号回收申请后，记录将显示在这里</p>
+                </div>
+                
+                <div id="records-container" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">账号信息</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">提交时间</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">审核状态</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">获得积分</th>
+                            </tr>
+                        </thead>
+                        <tbody id="records-list" class="bg-white divide-y divide-gray-200">
+                            <!-- 记录将动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">LEAL账号报单系统</h3>
+                    <p class="text-gray-400">高效管理账号获取与回收，便捷的积分兑换系统</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="announcement.html" class="hover:text-white transition">公告</a></li>
+                        <li><a href="contact.html" class="hover:text-white transition">联系客服</a></li>
+                        <li><a href="login.html" class="hover:text-white transition">登录</a></li>
+                        <li><a href="register.html" class="hover:text-white transition">注册</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">联系我们</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fa fa-envelope mr-2"></i> support@leal.com</li>
+                        <li><i class="fa fa-clock-o mr-2"></i> 工作时间：9:00-18:00（工作日）</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500">
+                © 2025 LEAL账号报单系统 版权所有
+            </div>
+        </div>
+    </footer>
+
+    <!-- 提示消息组件 -->
+    <div id="toast" class="toast"></div>
+    <!-- 先加载Supabase库 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // 1. 初始化Supabase客户端：变量名改为supabaseClient，避免与全局supabase冲突
+        const supabaseUrl = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+        // 关键修改：变量名从supabase改为supabaseClient
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+        
+        // 2. 全局变量
+        let currentUser = null;
+        
+        // 3. DOM元素
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const screenshotUpload = document.getElementById('screenshot-upload');
+        const uploadPreview = document.getElementById('upload-preview');
+        const fileCount = document.getElementById('file-count');
+        const screenshotError = document.getElementById('screenshot-error');
+        const hafCoinInput = document.getElementById('haf-coin');
+        const hafCoinError = document.getElementById('haf-coin-error');
+        const recycleForm = document.getElementById('recycle-form');
+        const submitButton = document.getElementById('submit-recycle');
+        const loadingIndicator = document.getElementById('recycle-loading');
+        const successMessage = document.getElementById('recycle-success');
+        const errorContainer = document.getElementById('recycle-error');
+        const errorMessage = document.getElementById('error-message');
+        const accountUsernameInput = document.getElementById('account-username');
+        const accountPasswordInput = document.getElementById('account-password');
+        
+        // 4. 工具函数：显示提示消息
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type}`;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        // 5. 移动端菜单切换
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+        // 联系客服模态框交互
+        const contactModal = document.getElementById('contact-modal');
+        const openContactModal = () => {
+            if (!contactModal) return;
+            contactModal.classList.remove('hidden');
+            contactModal.classList.add('flex');
+        };
+        const closeContactModal = () => {
+            if (!contactModal) return;
+            contactModal.classList.add('hidden');
+            contactModal.classList.remove('flex');
+        };
+        document.querySelectorAll('a[href="contact.html"]').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                openContactModal();
+            });
+        });
+        const btnClose = document.getElementById('contact-modal-close');
+        const btnOk = document.getElementById('contact-modal-ok');
+        const btnCopy = document.getElementById('contact-modal-copy');
+        btnClose && btnClose.addEventListener('click', closeContactModal);
+        btnOk && btnOk.addEventListener('click', closeContactModal);
+        contactModal && contactModal.addEventListener('click', (e) => {
+            if (e.target === contactModal) closeContactModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeContactModal();
+        });
+        btnCopy && btnCopy.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText('EACS12138');
+                btnCopy.textContent = '已复制';
+                setTimeout(() => (btnCopy.textContent = '复制微信'), 1500);
+            } catch (err) {
+                alert('复制失败，请手动复制：EACS12138');
+            }
+        });
+
+        // 公告模态框交互与每日一次弹出
+        const announcementModal = document.getElementById('announcement-modal');
+        const btnAnnClose = document.getElementById('announcement-close');
+        const btnAnnAck = document.getElementById('announcement-ack');
+        const openAnnouncementModal = () => {
+            if (!announcementModal) return;
+            announcementModal.classList.remove('hidden');
+            announcementModal.classList.add('flex');
+        };
+        const closeAnnouncementModal = () => {
+            if (!announcementModal) return;
+            announcementModal.classList.add('hidden');
+            announcementModal.classList.remove('flex');
+        };
+        document.querySelectorAll('a[href="announcement.html"]').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                openAnnouncementModal();
+            });
+        });
+        btnAnnClose && btnAnnClose.addEventListener('click', closeAnnouncementModal);
+        announcementModal && announcementModal.addEventListener('click', (e) => {
+            if (e.target === announcementModal) closeAnnouncementModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAnnouncementModal();
+        });
+        btnAnnAck && btnAnnAck.addEventListener('click', () => {
+            const todayKey = new Date().toISOString().slice(0, 10);
+            try { localStorage.setItem('announcement_ack_date', todayKey); } catch (_) {}
+            closeAnnouncementModal();
+        });
+        try {
+            const todayKey = new Date().toISOString().slice(0, 10);
+            const ackDate = localStorage.getItem('announcement_ack_date');
+            if (ackDate !== todayKey) openAnnouncementModal();
+        } catch (_) {}
+        
+        // 6. 哈夫币验证
+        hafCoinInput.addEventListener('input', () => {
+            if (hafCoinInput.value < 1000) {
+                hafCoinError.classList.remove('hidden');
+            } else {
+                hafCoinError.classList.add('hidden');
+            }
+        });
+        
+        // 7. 图片上传预览处理
+        function handleFilePreview(files) {
+            if (files.length < 5 || files.length > 6) {
+                screenshotError.classList.remove('hidden');
+                uploadPreview.classList.add('hidden');
+                return false;
+            }
+            
+            screenshotError.classList.add('hidden');
+            uploadPreview.classList.remove('hidden');
+            
+            const previewContainer = uploadPreview.querySelector('div');
+            previewContainer.innerHTML = '';
+            fileCount.textContent = `已选择 ${files.length} 张图片`;
+            
+            Array.from(files).forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.createElement('div');
+                    preview.className = 'relative w-20 h-20 bg-gray-100 rounded-md overflow-hidden';
+                    preview.innerHTML = `<img src="${e.target.result}" alt="截图 ${index + 1}" class="w-full h-full object-cover">`;
+                    previewContainer.appendChild(preview);
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            return true;
+        }
+        
+        // 8. 图片选择与拖拽上传
+        screenshotUpload.addEventListener('change', (e) => {
+            handleFilePreview(e.target.files);
+        });
+        
+        const dropArea = document.querySelector('.upload-container');
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+        
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => {
+                dropArea.classList.add('border-blue-500', 'bg-blue-50');
+            }, false);
+        });
+        
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => {
+                dropArea.classList.remove('border-blue-500', 'bg-blue-50');
+            }, false);
+        });
+        
+        dropArea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            
+            if (imageFiles.length > 0) {
+                const dataTransfer = new DataTransfer();
+                imageFiles.forEach(file => dataTransfer.items.add(file));
+                screenshotUpload.files = dataTransfer.files;
+                handleFilePreview(imageFiles);
+            }
+        }, false);
+        
+        // 9. 核心：验证账号归属（是否为当前用户通过本系统获取）
+        async function verifyAccountOwnership(username, password) {
+            try {
+                const { data: account, error: accountError } = await supabaseClient
+                    .from('steam_accounts')
+                    .select('id, steam_password, used_by')
+                    .eq('steam_username', username)
+                    .single();
+
+                if (accountError) {
+                    return { valid: false, message: '该账号不是通过本网站获取的，无法回收' };
+                }
+
+                if (account.used_by !== currentUser.id) {
+                    return { valid: false, message: '该账号不属于您，无法回收' };
+                }
+
+                const storedPassword = account.steam_password;
+                if (!storedPassword) {
+                    return { valid: false, message: '账号密码缺失，请联系管理员' };
+                }
+
+                if (storedPassword !== password) {
+                    return { valid: false, message: '账号密码错误，请重新输入' };
+                }
+
+                const { data: recycleRecord } = await supabaseClient
+                    .from('recycle_applications')
+                    .select('id,status,created_at')
+                    .eq('account_id', account.id)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                if (recycleRecord && recycleRecord.status !== 'rejected') {
+                    return { valid: false, message: '该账号已有申请处理中或已通过，暂不可重复提交' };
+                }
+
+                return { valid: true, accountId: account.id };
+
+            } catch (error) {
+                console.error('账号验证失败:', error);
+                return { valid: false, message: '验证失败，请稍后再试' };
+            }
+        }
+        
+        // 10. 表单提交处理
+        recycleForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                window.location.href = 'login.html?redirect=recycle-account.html';
+                return;
+            }
+            
+            // 基础表单验证
+            const files = screenshotUpload.files;
+            let isValid = true;
+            
+            if (files.length < 5 || files.length > 6) {
+                screenshotError.classList.remove('hidden');
+                isValid = false;
+            }
+            
+            if (hafCoinInput.value < 1000) {
+                hafCoinError.classList.remove('hidden');
+                isValid = false;
+            }
+            
+            const selectedLevel = document.querySelector('input[name="account-level"]:checked');
+            if (!selectedLevel) {
+                showToast('请选择账号等级', 'error');
+                isValid = false;
+            }
+            
+            if (!isValid) return;
+            
+            // 提交状态处理
+            submitButton.disabled = true;
+            loadingIndicator.classList.remove('hidden');
+            successMessage.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+            
+            try {
+                // 获取表单数据
+                const username = accountUsernameInput.value.trim();
+                const password = accountPasswordInput.value.trim();
+                const level = selectedLevel.value;
+                const hafCoin = parseInt(hafCoinInput.value);
+                const remark = document.getElementById('recycle-remark').value.trim();
+                
+                // 验证账号归属
+                const ownershipResult = await verifyAccountOwnership(username, password);
+                if (!ownershipResult.valid) {
+                    throw new Error(ownershipResult.message);
+                }
+                const accountId = ownershipResult.accountId;
+                
+                // 关键修改：supabase → supabaseClient
+                const { data: application, error: appError } = await supabaseClient
+                    .from('recycle_applications')
+                    .insert([{
+                        user_id: currentUser.id,
+                        account_id: accountId,
+                        username: username,
+                        password: password, // 实际项目建议加密存储
+                        level: level,
+                        haf_coin: hafCoin,
+                        remark: remark,
+                        status: 'pending'
+                    }])
+                    .select()
+                    .single();
+                
+                if (appError) throw appError;
+                const applicationId = application.id;
+                
+                // 上传图片并绑定到申请
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `recycle_${applicationId}_${accountId}_${i}_${Date.now()}.${fileExt}`;
+                    const objectKey = `${currentUser.id}/${fileName}`; // 上传到用户UID顶级目录
+                    
+                    // 关键修改：使用 objectKey 上传到用户目录
+                    const { error: uploadError } = await supabaseClient
+                        .storage
+                        .from('screenshots')
+                        .upload(objectKey, file);
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    // 获取公共URL（如果桶设置为public）；否则仅保存路径键
+                    const { data: publicUrlData } = supabaseClient
+                        .storage
+                        .from('screenshots')
+                        .getPublicUrl(objectKey);
+                    const publicUrl = publicUrlData?.publicUrl || `screenshots/${objectKey}`;
+                    
+                    // 关键修改：保存对象键和公共URL（显式检查插入错误）
+                    const { data: rsData, error: rsError } = await supabaseClient
+                        .from('recycle_screenshots')
+                        .insert([{ 
+                            application_id: applicationId,
+                            file_name: objectKey,
+                            url: publicUrl
+                        }])
+                        .select();
+                    if (rsError) throw rsError;
+                }
+                
+                // 提交成功
+                successMessage.classList.remove('hidden');
+                recycleForm.reset();
+                uploadPreview.classList.add('hidden');
+                fetchRecycleRecords(); // 刷新记录列表
+                
+            } catch (error) {
+                console.error('提交失败:', error);
+                let message = error?.message || String(error);
+                // 更精准的RLS提示
+                if (message.includes('row-level security')) {
+                    if (message.includes('recycle_screenshots')) {
+                        message = '插入失败：recycle_screenshots 表的 INSERT 策略未配置或不满足条件。请为 authenticated 角色添加策略，允许用户为自己创建的申请 (recycle_applications.user_id = auth.uid()) 插入截图。';
+                    } else {
+                        message = '上传失败：存储或数据未授权（RLS）。请检查 Storage 桶是否公开，以及相关表的策略是否允许当前用户操作。';
+                    }
+                } else if (message.includes('Bucket not found')) {
+                    message = '上传失败：存储桶 screenshots 未创建，请联系管理员在 Supabase Storage 中创建此桶。';
+                }
+                errorMessage.textContent = message;
+                errorContainer.classList.remove('hidden');
+            } finally {
+                submitButton.disabled = false;
+                loadingIndicator.classList.add('hidden');
+            }
+        });
+        
+        // 11. 获取用户的回收记录
+        async function fetchRecycleRecords() {
+            if (!currentUser) return;
+            
+            const recordsLoading = document.getElementById('records-loading');
+            const noRecords = document.getElementById('no-records');
+            const recordsContainer = document.getElementById('records-container');
+            const recordsList = document.getElementById('records-list');
+            
+            try {
+                recordsLoading.classList.remove('hidden');
+                noRecords.classList.add('hidden');
+                recordsContainer.classList.add('hidden');
+                
+                // 关键修改：supabase → supabaseClient
+                const { data, error } = await supabaseClient
+                    .from('recycle_applications')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+                
+                if (error) throw error;
+                
+                if (data.length === 0) {
+                    noRecords.classList.remove('hidden');
+                } else {
+                    recordsContainer.classList.remove('hidden');
+                    recordsList.innerHTML = '';
+                    
+                    data.forEach(record => {
+                        // 状态样式
+                        let statusClass = '';
+                        let statusText = '';
+                        switch (record.status) {
+                            case 'pending':
+                                statusClass = 'bg-yellow-100 text-yellow-800';
+                                statusText = '审核中';
+                                break;
+                            case 'approved':
+                                statusClass = 'bg-green-100 text-green-800';
+                                statusText = '已通过';
+                                break;
+                            case 'rejected':
+                                statusClass = 'bg-red-100 text-red-800';
+                                statusText = '已拒绝';
+                                break;
+                            default:
+                                statusClass = 'bg-gray-100 text-gray-800';
+                                statusText = record.status;
+                        }
+                        
+                        // 格式化日期
+                        const createdAt = new Date(record.created_at);
+                        const formattedDate = createdAt.toLocaleString('zh-CN');
+                        
+                        // 添加记录行
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50 transition';
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">${record.username}</div>
+                                <div class="text-sm text-gray-500">${record.level}级</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-900">${formattedDate}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                    ${statusText}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                ${record.points || '-'}
+                            </td>
+                        `;
+                        recordsList.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('加载记录失败:', error);
+                noRecords.classList.remove('hidden');
+                noRecords.innerHTML = `
+                    <i class="fa fa-exclamation-triangle text-5xl text-yellow-400 mb-3"></i>
+                    <p class="text-gray-500">加载记录失败</p>
+                    <p class="text-gray-400 mt-2">请刷新页面重试</p>
+                `;
+            } finally {
+                recordsLoading.classList.add('hidden');
+            }
+        }
+        
+        // 12. 检查用户登录状态
+        async function checkAuth() {
+            // 关键修改：supabase → supabaseClient
+            const { data: { session }, error: authError } = await supabaseClient.auth.getSession();
+            
+            if (authError) {
+                console.error('登录状态检查失败:', authError);
+                showToast('登录状态异常，请刷新页面', 'error');
+                return;
+            }
+            
+            if (session) {
+                currentUser = session.user;
+                // 更新导航栏
+                document.getElementById('auth-links').innerHTML = `
+                    <span id="user-email" class="mr-3">${session.user.email}</span>
+                    <span id="user-points" class="mr-3">积分：加载中</span>
+                    <button id="logout-btn" class="hover:text-blue-200 transition">退出登录</button>
+                `;
+                
+                document.getElementById('mobile-auth-links').innerHTML = `
+                    <span id="mobile-user-email">${session.user.email}</span>
+                    <span id="mobile-user-points" class="ml-3">积分：加载中</span>
+                    <button id="mobile-logout-btn" class="hover:text-blue-200 transition ml-3">退出登录</button>
+                `;
+                
+                // 绑定退出登录事件
+                document.getElementById('logout-btn').addEventListener('click', logout);
+                document.getElementById('mobile-logout-btn').addEventListener('click', logout);
+                
+                // 查询积分视图显示可用积分
+                try {
+                    const { data: summary, error: sumErr } = await supabaseClient
+                        .from('user_points_summary')
+                        .select('available_points')
+                        .eq('user_id', currentUser.id)
+                        .single();
+                    if (!sumErr && summary) {
+                        const available = summary.available_points ?? 0;
+                        const ptsEl = document.getElementById('user-points');
+                        const mPtsEl = document.getElementById('mobile-user-points');
+                        if (ptsEl) ptsEl.textContent = `积分：${available}`;
+                        if (mPtsEl) mPtsEl.textContent = `积分：${available}`;
+                    }
+                } catch (e) {
+                    console.warn('积分获取失败（忽略）：', e.message);
+                }
+                
+                // 加载回收记录
+                fetchRecycleRecords();
+            } else {
+                // 未登录状态
+                document.getElementById('records-container').classList.add('hidden');
+                document.getElementById('no-records').classList.remove('hidden');
+                document.getElementById('no-records').innerHTML = `
+                    <i class="fa fa-user-circle text-5xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500">请先登录查看回收记录</p>
+                    <a href="login.html?redirect=recycle-account.html" class="mt-3 inline-block text-blue-600 hover:underline">
+                        前往登录
+                    </a>
+                `;
+            }
+        }
+        
+        // 13. 退出登录
+        async function logout() {
+            // 关键修改：supabase → supabaseClient
+            const { error } = await supabaseClient.auth.signOut();
+            if (!error) {
+                window.location.reload();
+            } else {
+                showToast('退出登录失败，请重试', 'error');
+            }
+        }
+        
+        // 14. 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>

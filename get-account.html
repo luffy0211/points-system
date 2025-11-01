@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>获取账号 - LEAL账号报单系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 自定义样式 */
+        .modal-backdrop {
+            backdrop-filter: blur(2px);
+        }
+        .history-item:hover {
+            background-color: #f9fafb;
+        }
+        /* Must-read banner subtle pulse */
+        .must-read-pulse { 
+            animation: pulseBg 2s ease-in-out infinite; 
+        }
+        @keyframes pulseBg {
+            0%, 100% { background-color: #FEF3C7; }
+            50% { background-color: #FFEFC0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav id="navbar" class="bg-blue-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-xl font-bold">LEAL账号报单系统</a>
+            
+            <!-- 桌面导航 -->
+            <div class="hidden md:flex space-x-6">
+                <a href="index.html" class="hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="hover:text-blue-200 transition font-semibold border-b-2 border-white">获取账号</a>
+                <a href="recycle-account.html" class="hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="hover:text-blue-200 transition">积分兑换</a>
+                <div id="auth-links">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-button" class="md:hidden text-white focus:outline-none">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="md:hidden hidden bg-blue-700">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                <a href="index.html" class="py-2 hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="py-2 hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="py-2 hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="py-2 hover:text-blue-200 transition font-semibold">获取账号</a>
+                <a href="recycle-account.html" class="py-2 hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="py-2 hover:text-blue-200 transition">积分兑换</a>
+                <div id="mobile-auth-links" class="py-2">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 联系客服模态框 -->
+    <div id="contact-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-80 p-6 relative">
+            <button id="contact-modal-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                <i class="fa fa-times"></i>
+            </button>
+            <h3 class="text-lg font-semibold mb-2">联系客服</h3>
+            <p class="text-gray-700">微信：<span class="font-mono font-bold text-blue-600">EACS12138</span></p>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button id="contact-modal-copy" class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">复制微信</button>
+                <button id="contact-modal-ok" class="border px-3 py-1.5 rounded hover:bg-gray-50">知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-bold text-gray-800">获取账号</h1>
+                <p class="text-gray-600 mt-2">选择账号类型获取可用账号，查看历史记录</p>
+            </div>
+            <div class="mb-6">
+                <div class="must-read-pulse mx-auto max-w-3xl bg-yellow-100 border border-yellow-300 rounded-lg shadow flex items-center justify-center py-3 px-4">
+                    <i class="fa fa-exclamation-triangle text-yellow-600 text-2xl mr-3"></i>
+                    <a id="must-read-link" class="text-red-700 hover:text-red-800 font-extrabold underline text-lg md:text-xl tracking-wide cursor-pointer">取号前必读（点击查看）</a>
+                    <span class="ml-3 inline-block text-xs bg-red-600 text-white px-2 py-1 rounded">必读</span>
+                </div>
+            </div>
+            
+            <!-- 账号类型卡片 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                <!-- 基础账号 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
+                    <div class="bg-blue-500 text-white p-4">
+                        <h3 class="text-xl font-bold">基础账号（每个账号2积分）</h3>
+                        <!-- 删除介绍文案 -->
+                    </div>
+                    <div class="p-5">
+                        <!-- 替换为未发放数量展示 -->
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-gray-700">未发放数量：</span>
+                            <span id="available-basic-count" class="font-mono font-bold text-blue-600">—</span>
+                        </div>
+                        <button class="w-full bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-md transition select-account" data-type="basic">
+                            获取基础账号
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- 高级账号 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
+                    <div class="bg-purple-500 text-white p-4">
+                        <h3 class="text-xl font-bold">高级账号</h3>
+                        <!-- 删除介绍文案 -->
+                    </div>
+                    <div class="p-5">
+                        <!-- 替换为未发放数量展示 -->
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-gray-700">未发放数量：</span>
+                            <span id="available-premium-count" class="font-mono font-bold text-purple-600">—</span>
+                        </div>
+                        <button class="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-md transition select-account" data-type="premium">
+                            获取高级账号
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 历史获取记录 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-10">
+                <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                    <i class="fa fa-history text-blue-500 mr-2"></i> 历史获取记录
+                </h2>
+                
+                <div id="history-container" class="space-y-3">
+                    <!-- 加载状态 -->
+                    <div id="history-loading" class="py-8 text-center text-gray-500">
+                        <i class="fa fa-circle-o-notch fa-spin mr-2"></i> 加载历史记录中...
+                    </div>
+                    
+                    <!-- 空状态（默认隐藏） -->
+                    <div id="history-empty" class="py-8 text-center text-gray-500 hidden">
+                        <i class="fa fa-folder-open-o text-2xl mb-2"></i>
+                        <p>暂无账号获取记录</p>
+                    </div>
+                    
+                    <!-- 历史记录列表（动态生成） -->
+                    <div id="history-list" class="divide-y divide-gray-100 hidden"></div>
+                </div>
+            </div>
+
+            
+            <!-- 申请须知 -->
+            <div class="bg-blue-50 rounded-lg p-5 mt-8">
+                <h3 class="text-lg font-bold text-gray-800 mb-3 flex items-center">
+                    <i class="fa fa-info-circle text-blue-500 mr-2"></i> 账号说明
+                </h3>
+                <ul class="space-y-2 text-gray-700 list-disc pl-5">
+                    <li>每个用户每次可获取1个账号，有效期根据账号类型而定</li>
+                    <li>账号信息请妥善保管，刷新页面后仍可在历史记录中查看</li>
+                    <li>使用完毕请及时回收账号，以便他人使用</li>
+                    <li>违规使用将导致账号被收回并限制获取权限</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- 账号详情模态框 -->
+    <div id="account-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="modal-backdrop absolute inset-0 bg-black/50"></div>
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 z-10 overflow-hidden transform transition-all">
+            <div class="bg-blue-600 text-white p-4 flex justify-between items-center">
+                <h3 class="text-lg font-bold">账号详情</h3>
+                <button id="close-modal" class="text-white hover:text-blue-200">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">账号类型</label>
+                    <p id="modal-account-type" class="text-gray-900"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                    <p id="modal-username" class="text-gray-900 font-mono"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                    <p id="modal-password" class="text-gray-900 font-mono"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">获取时间</label>
+                    <p id="modal-get-time" class="text-gray-600 text-sm"></p>
+                </div>
+                <div class="pt-2">
+                    <button id="copy-account" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded-md transition flex items-center justify-center">
+                        <i class="fa fa-copy mr-2"></i> 复制账号信息
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 取号前必读模态框 -->
+    <div id="must-read-modal" class="fixed inset-0 z-50 hidden">
+        <div id="must-read-backdrop" class="absolute inset-0 bg-black/50"></div>
+        <div class="relative bg-white rounded-lg shadow-xl max-w-3xl w-11/12 mx-auto my-8 overflow-hidden">
+            <div class="bg-red-600 text-white p-4 flex items-center justify-between">
+                <h3 class="text-lg font-bold">取号前必读</h3>
+                <button id="must-read-close-top" class="hover:text-red-200"><i class="fa fa-times"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto" style="max-height:70vh;">
+                <header class="mb-4">
+                    <h1 class="text-2xl font-bold">SESO三角洲 打之前必看！！！！</h1>
+                </header>
+                <section class="mb-6">
+                    <h2 class="text-xl font-semibold mb-2">《正常回收》标准：</h2>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>30级账号：1000万哈夫币 / 1500万哈夫币 / 2000万哈夫币</li>
+                        <li>33级账号：1000万哈夫币 / 1500万哈夫币 / 2000万哈夫币</li>
+                        <li>比如你打到了30级1400w哈夫币，那么是按照30级1000w价格算。可以打到1500w 按照30级1500w价格算 看你自己选择（哈夫币为纯币，不是总资产）</li>
+                    </ul>
+                    <h3 class="text-lg font-medium mt-4">⚠️ 设备与环境要求：</h3>
+                    <p class="text-gray-700">必须使用个人电脑完成，禁止使用网吧、电竞酒店等公共设备！<br>此类环境极易触发封号机制，一旦封号损失自负！</p>
+                    <h3 class="text-lg font-medium mt-4">📦 交号前仓库必须保留以下物品（否则不予回收）：</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>红甲修 2+</li>
+                        <li>血包 2+</li>
+                        <li>AWM子弹</li>
+                    </ul>
+                    <p class="text-gray-700">❗如已卖出，请务必从交易所购回后再交号！</p>
+                    <p class="text-gray-700">上号后请务必对干员乌鲁鲁进行招募获取</p>
+                    <div class="text-xs text-gray-500 my-4">本地示例截图已移除，请使用存储URL。</div>
+                    <h3 class="text-lg font-medium mt-4">🛑 重要警告：严禁使用外挂！</h3>
+                    <p class="text-gray-700">如账号在交号前因使用外挂等违规行为导致封禁，<br>且封禁时间发生在你使用期间，我们将不予结算！<br>请务必规范操作，因违规带来的损失由使用者自行承担。</p>
+                </section>
+                <section>
+                    <h2 class="text-xl font-semibold mb-2">《正常回收》任务执行规范：</h2>
+                    <h3 class="text-lg font-medium">📌 账号任务权限说明</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>非必要禁止进入机密地图！！！进入机密地图完成任务，绝对禁止击杀玩家</li>
+                    </ul>
+                    <h3 class="text-lg font-medium mt-4">⚡ 推荐任务完成方式：</h3>
+                    <p class="text-gray-700">建议通过快速完成部门任务达到30级，熟练了一般都在四五个小时。<br>注意尽量不要打真人 不能超过40！！！</p>
+                    <div class="text-xs text-gray-500 my-4">本地示例截图已移除，请使用存储URL。</div>
+                    <h3 class="text-lg font-medium mt-4">🧭 任务执行注意事项：</h3>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li>❗ 严禁点击“放弃战斗”主动退出；</li>
+                        <li>部门任务都可以做但请务必执行：
+                            <ul class="list-disc pl-5 space-y-1">
+                                <li>→ 尽量避免与玩家交战；</li>
+                                <li>→ 尽量不攻击真人玩家；</li>
+                                <li>→ 如击败真人，总击杀数请勿超过40。</li>
+                            </ul>
+                        </li>
+                    </ul>
+                </section>
+            </div>
+            <div class="p-4 border-t text-right">
+                <button id="must-read-ack" class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded">
+                    我已经知晓
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">LEAL账号报单系统</h3>
+                    <p class="text-gray-400">高效管理账号获取与回收，便捷的积分兑换系统</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="announcement.html" class="hover:text-white transition">公告</a></li>
+                        <li><a href="contact.html" class="hover:text-white transition">联系客服</a></li>
+                        <li><a href="login.html" class="hover:text-white transition">登录</a></li>
+                        <li><a href="register.html" class="hover:text-white transition">注册</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">联系我们</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fa fa-envelope mr-2"></i> support@leal.com</li>
+                        <li><i class="fa fa-clock-o mr-2"></i> 工作时间：9:00-18:00（工作日）</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500">
+                © 2025 LEAL账号报单系统 版权所有
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    // 初始化Supabase客户端（确保变量名无冲突）
+    const supabaseUrl = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey); // 确保客户端初始化正确
+
+    // 全局变量
+    let currentUser = null;
+    let selectedAccountType = '';
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', async () => {
+        initMobileMenu();
+        const isLogin = await checkAuth(); // 明确接收登录状态
+        if (isLogin) {
+            await loadAccountHistory(); // 确保登录后再加载历史
+        }
+        // 加载未发放数量
+        await loadAvailableCounts();
+        // 订阅 steam_accounts 变化，实时刷新数量
+        try {
+            supabaseClient
+                .channel('available_counts')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'steam_accounts' }, () => {
+                    loadAvailableCounts();
+                })
+                .subscribe();
+        } catch (_) {}
+        bindAccountTypeButtons();
+        bindModalEvents();
+    });
+
+    // 统计未发放账号数量（基础/高级）
+    async function loadAvailableCounts() {
+        const basicEl = document.getElementById('available-basic-count');
+        const premiumEl = document.getElementById('available-premium-count');
+        if (!basicEl || !premiumEl) return;
+        // 基础
+        try {
+            const { count: basicCount, error: bErr } = await supabaseClient
+                .from('steam_accounts')
+                .select('id', { count: 'exact', head: true })
+                .eq('account_type', 'basic')
+                .is('used_by', null);
+            basicEl.textContent = (!bErr && basicCount !== null) ? basicCount : '0';
+        } catch (_) {
+            basicEl.textContent = '0';
+        }
+        // 高级
+        try {
+            const { count: premiumCount, error: pErr } = await supabaseClient
+                .from('steam_accounts')
+                .select('id', { count: 'exact', head: true })
+                .eq('account_type', 'premium')
+                .is('used_by', null);
+            premiumEl.textContent = (!pErr && premiumCount !== null) ? premiumCount : '0';
+        } catch (_) {
+            premiumEl.textContent = '0';
+        }
+    }
+
+    // 初始化移动端菜单
+    function initMobileMenu() {
+        document.getElementById('mobile-menu-button').addEventListener('click', () => {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+        // 联系客服模态框交互
+        const contactModal = document.getElementById('contact-modal');
+        const openContactModal = () => {
+            if (!contactModal) return;
+            contactModal.classList.remove('hidden');
+            contactModal.classList.add('flex');
+        };
+        const closeContactModal = () => {
+            if (!contactModal) return;
+            contactModal.classList.add('hidden');
+            contactModal.classList.remove('flex');
+        };
+        document.querySelectorAll('a[href="contact.html"]').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                openContactModal();
+            });
+        });
+        const btnClose = document.getElementById('contact-modal-close');
+        const btnOk = document.getElementById('contact-modal-ok');
+        const btnCopy = document.getElementById('contact-modal-copy');
+        btnClose && btnClose.addEventListener('click', closeContactModal);
+        btnOk && btnOk.addEventListener('click', closeContactModal);
+        contactModal && contactModal.addEventListener('click', (e) => {
+            if (e.target === contactModal) closeContactModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeContactModal();
+        });
+        btnCopy && btnCopy.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText('EACS12138');
+                btnCopy.textContent = '已复制';
+                setTimeout(() => (btnCopy.textContent = '复制微信'), 1500);
+            } catch (err) {
+                alert('复制失败，请手动复制：EACS12138');
+            }
+        });
+
+        // 公告模态框交互与每日一次弹出
+        const announcementModal = document.getElementById('announcement-modal');
+        const btnAnnClose = document.getElementById('announcement-close');
+        const btnAnnAck = document.getElementById('announcement-ack');
+        const openAnnouncementModal = () => {
+            if (!announcementModal) return;
+            announcementModal.classList.remove('hidden');
+            announcementModal.classList.add('flex');
+        };
+        const closeAnnouncementModal = () => {
+            if (!announcementModal) return;
+            announcementModal.classList.add('hidden');
+            announcementModal.classList.remove('flex');
+        };
+        document.querySelectorAll('a[href="announcement.html"]').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                openAnnouncementModal();
+            });
+        });
+        btnAnnClose && btnAnnClose.addEventListener('click', closeAnnouncementModal);
+        announcementModal && announcementModal.addEventListener('click', (e) => {
+            if (e.target === announcementModal) closeAnnouncementModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAnnouncementModal();
+        });
+        btnAnnAck && btnAnnAck.addEventListener('click', () => {
+            const todayKey = new Date().toISOString().slice(0, 10);
+            try { localStorage.setItem('announcement_ack_date', todayKey); } catch (_) {}
+            closeAnnouncementModal();
+        });
+        try {
+            const todayKey = new Date().toISOString().slice(0, 10);
+            const ackDate = localStorage.getItem('announcement_ack_date');
+            if (ackDate !== todayKey) openAnnouncementModal();
+        } catch (_) {}
+
+    }
+
+    // 检查用户登录状态（确保返回状态正确）
+    async function checkAuth() {
+        try {
+            const { data: { session }, error: authError } = await supabaseClient.auth.getSession();
+            if (authError) throw authError;
+            
+            if (session) {
+                currentUser = session.user;
+                // 更新导航栏用户信息（确保DOM元素存在）
+                const authLinks = document.getElementById('auth-links');
+                const mobileAuthLinks = document.getElementById('mobile-auth-links');
+                if (authLinks && mobileAuthLinks) {
+                    authLinks.innerHTML = `
+                        <span id="user-email" class="mr-3">${currentUser.email}</span>
+                        <span id="user-points" class="mr-3">积分：加载中</span>
+                        <button id="logout-btn" class="hover:text-blue-200 transition">退出登录</button>
+                    `;
+                    mobileAuthLinks.innerHTML = `
+                        <span id="mobile-user-email">${currentUser.email}</span>
+                        <span id="mobile-user-points" class="ml-3">积分：加载中</span>
+                        <button id="mobile-logout-btn" class="hover:text-blue-200 transition ml-3">退出登录</button>
+                    `;
+                    // 绑定退出事件（确保按钮存在）
+                    document.getElementById('logout-btn')?.addEventListener('click', logout);
+                    document.getElementById('mobile-logout-btn')?.addEventListener('click', logout);
+                }
+
+                // 读取积分汇总视图，显示可用积分
+                try {
+                    const { data: summary, error: sumErr } = await supabaseClient
+                        .from('user_points_summary')
+                        .select('available_points')
+                        .eq('user_id', currentUser.id)
+                        .single();
+                    if (!sumErr && summary) {
+                        const available = summary.available_points ?? 0;
+                        const ptsEl = document.getElementById('user-points');
+                        const mPtsEl = document.getElementById('mobile-user-points');
+                        if (ptsEl) ptsEl.textContent = `积分：${available}`;
+                        if (mPtsEl) mPtsEl.textContent = `积分：${available}`;
+                    }
+                } catch (e) {
+                    console.warn('积分获取失败（忽略）：', e.message);
+                }
+                return true; // 登录成功
+            } else {
+                showToast('请先登录后获取账号', 'warning');
+                return false; // 未登录
+            }
+        } catch (error) {
+            console.error('登录状态检查失败:', error);
+            showToast('登录状态异常，请刷新页面', 'error');
+            return false;
+        }
+    }
+
+    // 退出登录
+    async function logout() {
+        const { error } = await supabaseClient.auth.signOut();
+        if (!error) {
+            window.location.href = 'login.html'; // 直接跳转到登录页
+        } else {
+            showToast('退出登录失败，请重试', 'error');
+        }
+    }
+
+    // 绑定账号类型选择按钮（确保点击逻辑完整）
+    function bindAccountTypeButtons() {
+        document.querySelectorAll('.select-account').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                // 二次确认登录状态
+                if (!currentUser) {
+                    window.location.href = 'login.html';
+                    return;
+                }
+                selectedAccountType = e.currentTarget.getAttribute('data-type');
+                await getAccountFromSupabase(selectedAccountType);
+            });
+        });
+    }
+
+    // 核心：从Supabase获取可用账号（原子化操作，确保返回账号密码）
+    async function getAccountFromSupabase(accountType) {
+        const buttons = document.querySelectorAll('.select-account');
+        // 禁用所有获取按钮，防止重复点击
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin mr-2"></i> 获取中...';
+        });
+    
+        try {
+            // 0. 取号前检查积分是否足够（至少 2 积分）
+            const { data: summary } = await supabaseClient
+                .from('user_points_summary')
+                .select('available_points')
+                .eq('user_id', currentUser.id)
+                .single();
+            const available = summary?.available_points ?? 0;
+            if (available < 2) {
+                showToast('积分不足，至少需要 2 积分才能取号', 'error');
+                return;
+            }
+    
+            // 1. 调用存储过程（原子化获取账号，避免并发重复）
+            console.log("调用存储过程的参数：", {
+              p_account_type: accountType, // 应为'basic'或'premium'
+              p_user_id: currentUser.id // 应为UUID格式（如："a1b2c3d4-...")
+            });
+    
+            const { data: account, error: rpcError } = await supabaseClient.rpc(
+                'get_available_steam_account', // 存储过程名
+                { 
+                    p_account_type: accountType, 
+                    p_user_id: currentUser.id 
+                }
+            );
+    
+            if (rpcError) throw rpcError;
+            if (!account || account.length === 0) {
+                showToast('当前无可用账号，请稍后再试', 'error');
+                return;
+            }
+    
+            // 2. 提取账号信息（仅使用明文密码字段）
+            const { account_id: accountId, steam_username, steam_password } = account[0];
+            const password = steam_password;
+            if (!password) {
+                showToast('账号密码缺失，请联系管理员', 'error');
+                return;
+            }
+            // 3. 记录获取历史（确保字段正确）
+            const { error: historyError } = await supabaseClient
+                .from('account_history')
+                .insert([
+                    {
+                        user_id: currentUser.id,
+                        account_id: accountId, // 使用提取的accountId
+                        account_type: accountType,
+                        username: steam_username
+                    }
+                ]);
+    
+            if (historyError) throw historyError;
+    
+            // 3.1 成功获取后扣除 2 积分（事务记录）
+            try {
+                await supabaseClient
+                    .from('points_transactions')
+                    .insert([{ user_id: currentUser.id, type: 'redeem', amount: 2, note: `取号扣除2积分（account_id=${accountId}）` }]);
+            } catch (spendErr) {
+                console.warn('取号扣分失败，请联系管理员人工处理:', spendErr?.message || spendErr);
+            }
+    
+            // 4. 显示账号详情（确保模态框数据正确）
+            showAccountModal({
+                type: accountType === 'basic' ? '基础账号' : '高级账号',
+                username: steam_username,
+                password: password,
+                time: new Date().toLocaleString()
+            });
+    
+            // 5. 刷新历史记录
+            await loadAccountHistory();
+            showToast('账号获取成功！请妥善保管', 'success');
+    
+        } catch (error) {
+            console.error('获取账号失败:', error);
+            // 针对性错误提示
+            if (error.code === 'PGRST116') {
+                showToast('当前无可用账号，请稍后再试', 'error');
+            } else if (error.code === '42501') {
+                showToast('权限不足，无法获取账号', 'error');
+            } else {
+                showToast(`获取失败: ${error.message}`, 'error');
+            }
+        } finally {
+            // 恢复按钮状态
+            buttons.forEach(btn => {
+                btn.disabled = false;
+                const type = btn.getAttribute('data-type');
+                btn.innerHTML = `获取${type === 'basic' ? '基础' : '高级'}账号`;
+            });
+        }
+    }
+
+    // 加载账号获取历史（确保数据正确渲染）
+    async function loadAccountHistory() {
+        const loadingEl = document.getElementById('history-loading');
+        const emptyEl = document.getElementById('history-empty');
+        const listEl = document.getElementById('history-list');
+
+        try {
+            loadingEl.classList.remove('hidden');
+            emptyEl.classList.add('hidden');
+            listEl.classList.add('hidden');
+
+            // 查询当前用户的历史记录（确保关联正确）
+            const { data: history, error } = await supabaseClient
+                .from('account_history')
+                .select('id, account_id, account_type, username, get_time')
+                .eq('user_id', currentUser.id)
+                .order('get_time', { ascending: false });
+
+            if (error) throw error;
+
+            // 渲染历史记录
+            if (history.length === 0) {
+                emptyEl.classList.remove('hidden');
+            } else {
+                listEl.classList.remove('hidden');
+                listEl.innerHTML = history.map(item => `
+                    <div class="history-item p-3 rounded-lg transition-colors">
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <p class="font-medium">${item.account_type === 'basic' ? '基础账号' : '高级账号'}</p>
+                                <p class="text-sm text-gray-500">账号：${item.username} | 获取时间: ${new Date(item.get_time).toLocaleString()}</p>
+                            </div>
+                            <button class="view-details text-blue-600 hover:text-blue-800 transition" 
+                                data-account-id="${item.account_id}">
+                                <i class="fa fa-eye mr-1"></i> 详情
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // 绑定详情按钮（确保事件生效）
+                document.querySelectorAll('.view-details').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        await showHistoryAccountDetails(e.currentTarget.getAttribute('data-account-id'));
+                    });
+                });
+            }
+
+        } catch (error) {
+            console.error('加载历史记录失败:', error);
+            loadingEl.innerHTML = `<p class="text-red-500"><i class="fa fa-exclamation-triangle mr-2"></i> 加载失败: ${error.message}</p>`;
+        } finally {
+            loadingEl.classList.add('hidden');
+        }
+    }
+
+    // 显示历史账号详情（仅使用明文密码）
+    async function showHistoryAccountDetails(accountId) {
+        try {
+            const { data: account, error: accountError } = await supabaseClient
+                .from('steam_accounts')
+                .select('steam_username, steam_password')
+                .eq('id', accountId)
+                .eq('used_by', currentUser.id)
+                .single();
+
+            if (accountError) throw accountError;
+
+            const { data: history, error: historyError } = await supabaseClient
+                .from('account_history')
+                .select('account_type, get_time')
+                .eq('account_id', accountId)
+                .eq('user_id', currentUser.id)
+                .single();
+
+            if (historyError) throw historyError;
+
+            const pwd = account.steam_password;
+            if (!pwd) {
+                showToast('账号密码缺失，请联系管理员', 'error');
+                return;
+            }
+            showAccountModal({
+                type: history.account_type === 'basic' ? '基础账号' : '高级账号',
+                username: account.steam_username,
+                password: pwd,
+                time: new Date(history.get_time).toLocaleString()
+            });
+
+        } catch (error) {
+            console.error('查看详情失败:', error);
+            if (error.code === 'PGRST116') {
+                showToast('该账号不存在或已被回收', 'error');
+            } else if (error.code === '42501') {
+                showToast('无权限查看该账号', 'error');
+            } else {
+                showToast('无法查看账号详情', 'error');
+            }
+        }
+    }
+
+    // 绑定模态框事件（确保交互正常）
+    function bindModalEvents() {
+        // 关闭模态框
+        document.getElementById('close-modal').addEventListener('click', () => {
+            document.getElementById('account-modal').classList.add('hidden');
+        });
+
+        // 点击背景关闭
+        document.querySelector('.modal-backdrop').addEventListener('click', (e) => {
+            if (e.target === document.querySelector('.modal-backdrop')) {
+                document.getElementById('account-modal').classList.add('hidden');
+            }
+        });
+
+        // 复制账号信息（确保复制内容正确）
+        document.getElementById('copy-account').addEventListener('click', async () => {
+            const username = document.getElementById('modal-username').textContent;
+            const password = document.getElementById('modal-password').textContent;
+            const text = `用户名: ${username}\n密码: ${password}`;
+            
+            try {
+                await navigator.clipboard.writeText(text);
+                const originalHtml = document.getElementById('copy-account').innerHTML;
+                document.getElementById('copy-account').innerHTML = '<i class="fa fa-check mr-2"></i> 已复制';
+                setTimeout(() => {
+                    document.getElementById('copy-account').innerHTML = originalHtml;
+                }, 2000);
+            } catch (copyError) {
+                console.error('复制失败:', copyError);
+                showToast('复制失败，请手动记录', 'error');
+            }
+        });
+    }
+
+    // 显示账号详情模态框（确保数据正确渲染）
+    function showAccountModal(data) {
+        // 确保模态框元素存在
+        const modalType = document.getElementById('modal-account-type');
+        const modalUsername = document.getElementById('modal-username');
+        const modalPassword = document.getElementById('modal-password');
+        const modalTime = document.getElementById('modal-get-time');
+        const accountModal = document.getElementById('account-modal');
+
+        if (modalType && modalUsername && modalPassword && modalTime && accountModal) {
+            modalType.textContent = data.type;
+            modalUsername.textContent = data.username;
+            modalPassword.textContent = data.password;
+            modalTime.textContent = data.time;
+            accountModal.classList.remove('hidden');
+        }
+    }
+
+    // 显示提示消息（确保样式和显示正常）
+    function showToast(message, type = 'info') {
+        let toast = document.getElementById('custom-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'custom-toast';
+            document.body.appendChild(toast);
+        }
+
+        toast.textContent = message;
+        // 统一提示样式
+        toast.className = 'fixed bottom-5 right-5 z-50 px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-0 opacity-100';
+        switch(type) {
+            case 'success':
+                toast.classList.add('bg-green-500', 'text-white');
+                break;
+            case 'error':
+                toast.classList.add('bg-red-500', 'text-white');
+                break;
+            case 'warning':
+                toast.classList.add('bg-yellow-500', 'text-white');
+                break;
+            default:
+                toast.classList.add('bg-blue-500', 'text-white');
+        }
+
+        // 自动关闭
+        setTimeout(() => {
+            toast.classList.add('translate-y-10', 'opacity-0');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    // 绑定“取号前必读”弹窗
+    (function() {
+        const link = document.getElementById('must-read-link');
+        const modal = document.getElementById('must-read-modal');
+        const closeTop = document.getElementById('must-read-close-top');
+        const backdrop = document.getElementById('must-read-backdrop');
+        const ack = document.getElementById('must-read-ack');
+        if (link && modal && closeTop && backdrop && ack) {
+            link.addEventListener('click', () => { modal.classList.remove('hidden'); });
+            const hide = () => modal.classList.add('hidden');
+            closeTop.addEventListener('click', hide);
+            backdrop.addEventListener('click', hide);
+            ack.addEventListener('click', hide);
+        }
+    })();
+    </script>
+</body>
+</html>

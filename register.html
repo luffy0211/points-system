@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - LEAL账号报单系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 本地CSS（按需启用） -->
+    <!-- <link rel="stylesheet" href="css/style.css"> -->
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav id="navbar" class="bg-blue-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-xl font-bold">LEAL账号报单系统</a>
+            
+            <!-- 桌面导航 -->
+            <div class="hidden md:flex space-x-6">
+                <a href="index.html" class="hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="hover:text-blue-200 transition">积分兑换</a>
+                <div id="auth-links">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-button" class="md:hidden text-white focus:outline-none">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="md:hidden hidden bg-blue-700">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                <a href="index.html" class="py-2 hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="py-2 hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="py-2 hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="py-2 hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="py-2 hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="py-2 hover:text-blue-200 transition">积分兑换</a>
+                <div id="mobile-auth-links" class="py-2">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 联系客服模态框 -->
+    <div id="contact-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-80 p-6 relative">
+            <button id="contact-modal-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                <i class="fa fa-times"></i>
+            </button>
+            <h3 class="text-lg font-semibold mb-2">联系客服</h3>
+            <p class="text-gray-700">微信：<span class="font-mono font-bold text-blue-600">EACS12138</span></p>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button id="contact-modal-copy" class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">复制微信</button>
+                <button id="contact-modal-ok" class="border px-3 py-1.5 rounded hover:bg-gray-50">知道了</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 公告模态框 -->
+    <div id="announcement-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-96 p-6 relative">
+            <button id="announcement-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                <i class="fa fa-times"></i>
+            </button>
+            <h3 class="text-lg font-semibold mb-3">公告</h3>
+            <p class="text-gray-700 leading-relaxed">
+                三角洲行情大跌，价格持续下减，对价格进行调整，等待市场回暖会相应提高价格
+            </p>
+            <div class="mt-6 flex justify-end">
+                <button id="announcement-ack" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">我已知晓</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-md mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">用户注册</h1>
+                <p class="text-gray-600 mt-2">请填写以下信息完成注册</p>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <form id="register-form" class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-gray-700 font-medium mb-2">邮箱</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i class="fa fa-envelope"></i>
+                            </span>
+                            <input type="email" id="email" name="email" 
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="请输入您的邮箱" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="password" class="block text-gray-700 font-medium mb-2">密码</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i class="fa fa-lock"></i>
+                            </span>
+                            <input type="password" id="password" name="password" 
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="请设置密码（至少8位）" minlength="8" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="confirm-password" class="block text-gray-700 font-medium mb-2">确认密码</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i class="fa fa-lock"></i>
+                            </span>
+                            <input type="password" id="confirm-password" name="confirm-password" 
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="请再次输入密码" minlength="8" required>
+                        </div>
+                    </div>
+
+                    <!-- 邀请码输入区域（重新添加） -->
+                    <div>
+                        <label for="invite-code" class="block text-gray-700 font-medium mb-2">邀请码 <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i class="fa fa-key"></i>
+                            </span>
+                            <input type="text" id="invite-code" name="invite-code" 
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="请输入邀请码" required>
+                            <button type="button" id="verify-code-btn" 
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-blue-600 hover:text-blue-800 transition">
+                                验证
+                            </button>
+                        </div>
+                        <p id="code-verify-result" class="mt-1 text-sm hidden"></p>
+                    </div>
+                    
+                    <div class="pt-2">
+                        <button type="submit" id="register-btn" disabled
+                            class="w-full bg-gray-400 text-white py-2 px-4 rounded-md cursor-not-allowed transition">
+                            注册
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="error-message" class="mt-4 text-red-500 text-center hidden"></div>
+                <div id="success-message" class="mt-4 text-green-500 text-center hidden"></div>
+                
+                <div class="mt-6 text-center">
+                    <p class="text-gray-600">
+                        已有账号？ <a href="login.html" class="text-blue-600 hover:underline">立即登录</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">LEAL账号报单系统</h3>
+                    <p class="text-gray-400">高效管理账号获取与回收，便捷的积分兑换系统</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="announcement.html" class="hover:text-white transition">公告</a></li>
+                        <li><a href="contact.html" class="hover:text-white transition">联系客服</a></li>
+                        <li><a href="login.html" class="hover:text-white transition">登录</a></li>
+                        <li><a href="register.html" class="hover:text-white transition">注册</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">联系我们</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fa fa-envelope mr-2"></i> support@leal.com</li>
+                        <li><i class="fa fa-clock-o mr-2"></i> 工作时间：9:00-18:00（工作日）</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500">
+                <p>&copy; 2025 LEAL账号报单系统 版权所有</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Supabase客户端配置 -->
+    <script src="js/supabase.js" type="module"></script>
+
+    <!-- 页面核心逻辑 -->
+    <script type="module">
+        import { supabase } from './js/supabase.js';
+
+        // 全局变量：记录验证通过的邀请码
+        let validInviteCode = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initNavbar();
+            checkIfLoggedIn();
+            bindInviteCodeVerify(); // 绑定邀请码验证事件
+            bindRegisterForm();
+        });
+
+        // 初始化导航
+        function initNavbar() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+
+            // 联系客服模态框交互
+            const contactModal = document.getElementById('contact-modal');
+            const btnClose = document.getElementById('contact-modal-close');
+            const btnOk = document.getElementById('contact-modal-ok');
+            const btnCopy = document.getElementById('contact-modal-copy');
+
+            const openContactModal = () => {
+                if (!contactModal) return;
+                contactModal.classList.remove('hidden');
+                contactModal.classList.add('flex');
+            };
+
+            const closeContactModal = () => {
+                if (!contactModal) return;
+                contactModal.classList.add('hidden');
+                contactModal.classList.remove('flex');
+            };
+
+            document.querySelectorAll('a[href="contact.html"]').forEach((el) => {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openContactModal();
+                });
+            });
+
+            btnClose && btnClose.addEventListener('click', closeContactModal);
+            btnOk && btnOk.addEventListener('click', closeContactModal);
+            contactModal && contactModal.addEventListener('click', (e) => {
+                if (e.target === contactModal) closeContactModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeContactModal();
+            });
+            btnCopy && btnCopy.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText('EACS12138');
+                    btnCopy.textContent = '已复制';
+                    setTimeout(() => (btnCopy.textContent = '复制微信'), 1500);
+                } catch (err) {
+                    alert('复制失败，请手动复制：EACS12138');
+                }
+            });
+
+            // 公告模态框交互与每日一次弹出
+            const announcementModal = document.getElementById('announcement-modal');
+            const btnAnnClose = document.getElementById('announcement-close');
+            const btnAnnAck = document.getElementById('announcement-ack');
+            const openAnnouncementModal = () => {
+                if (!announcementModal) return;
+                announcementModal.classList.remove('hidden');
+                announcementModal.classList.add('flex');
+            };
+            const closeAnnouncementModal = () => {
+                if (!announcementModal) return;
+                announcementModal.classList.add('hidden');
+                announcementModal.classList.remove('flex');
+            };
+            document.querySelectorAll('a[href="announcement.html"]').forEach((el) => {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openAnnouncementModal();
+                });
+            });
+            btnAnnClose && btnAnnClose.addEventListener('click', closeAnnouncementModal);
+            btnAnnAck && btnAnnAck.addEventListener('click', () => {
+                const todayKey = new Date().toISOString().slice(0, 10);
+                try { localStorage.setItem('announcement_ack_date', todayKey); } catch (_) {}
+                closeAnnouncementModal();
+            });
+            announcementModal && announcementModal.addEventListener('click', (e) => {
+                if (e.target === announcementModal) closeAnnouncementModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeAnnouncementModal();
+            });
+            try {
+                const todayKey = new Date().toISOString().slice(0, 10);
+                const ackDate = localStorage.getItem('announcement_ack_date');
+                if (ackDate !== todayKey) openAnnouncementModal();
+            } catch (_) {}
+        }
+
+        // 检查登录状态
+        async function checkIfLoggedIn() {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) window.location.href = 'index.html';
+            } catch (err) {
+                console.error('检查登录状态失败:', err);
+            }
+        }
+
+        // 绑定邀请码验证按钮事件
+        function bindInviteCodeVerify() {
+            const verifyBtn = document.getElementById('verify-code-btn');
+            const inviteCodeInput = document.getElementById('invite-code');
+            const resultEl = document.getElementById('code-verify-result');
+            const registerBtn = document.getElementById('register-btn');
+
+            verifyBtn.addEventListener('click', async () => {
+                const code = inviteCodeInput.value.trim();
+                if (!code) {
+                    showCodeResult(resultEl, '请输入邀请码', 'red');
+                    return;
+                }
+
+                // 验证邀请码是否有效（查询invitation_codes表）
+                const { data, error } = await supabase
+                    .from('invitation_codes')
+                    .select('status, expires_at')
+                    .eq('code', code)
+                    .single();
+
+                if (error) {
+                    showCodeResult(resultEl, '邀请码不存在', 'red');
+                    validInviteCode = null;
+                    registerBtn.disabled = true;
+                    registerBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                    registerBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    return;
+                }
+
+                // 检查邀请码状态和过期时间
+                const isExpired = data.expires_at && new Date(data.expires_at) < new Date();
+                if (data.status !== 'valid' || isExpired) {
+                    const msg = isExpired ? '邀请码已过期' : '邀请码已失效';
+                    showCodeResult(resultEl, msg, 'red');
+                    validInviteCode = null;
+                    registerBtn.disabled = true;
+                    registerBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                    registerBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    return;
+                }
+
+                // 邀请码有效
+                showCodeResult(resultEl, '邀请码验证通过', 'green');
+                validInviteCode = code; // 记录有效邀请码
+                registerBtn.disabled = false;
+                registerBtn.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                registerBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            });
+        }
+
+        // 显示邀请码验证结果
+        function showCodeResult(el, text, color) {
+            el.textContent = text;
+            el.className = `mt-1 text-sm ${color === 'red' ? 'text-red-500' : 'text-green-500'}`;
+            el.classList.remove('hidden');
+        }
+
+        // 绑定注册表单提交事件
+        function bindRegisterForm() {
+            const form = document.getElementById('register-form');
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleRegister();
+            });
+        }
+
+        // 处理注册逻辑（取消邮箱认证 + 邀请码关联）
+        async function handleRegister() {
+            // 验证邀请码是否已通过验证
+            if (!validInviteCode) {
+                document.getElementById('error-message').textContent = '请先验证邀请码';
+                document.getElementById('error-message').classList.remove('hidden');
+                return;
+            }
+
+            // 获取表单数据
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const errorEl = document.getElementById('error-message');
+            const successEl = document.getElementById('success-message');
+
+            // 重置消息
+            errorEl.classList.add('hidden');
+            successEl.classList.add('hidden');
+
+            // 前端验证
+            if (password !== confirmPassword) {
+                errorEl.textContent = '两次输入的密码不一致';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            if (password.length < 8) {
+                errorEl.textContent = '密码长度至少为8位';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                errorEl.textContent = '请输入有效的邮箱地址';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // 1. 注册用户（取消邮箱认证：通过Supabase控制台设置关闭邮箱验证）
+                const { data, error: signUpError } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                    // 可选：如果需要跳转，可添加redirectTo，但关闭邮箱验证后无需跳转
+                    // options: { emailRedirectTo: window.location.origin }
+                });
+
+                if (signUpError) throw signUpError;
+                if (!data.user) throw new Error('注册失败，未创建用户');
+
+                // 2. 注册成功后，更新邀请码状态为"已使用"
+                const { error: updateCodeError } = await supabase
+                    .from('invitation_codes')
+                    .update({
+                        status: 'used',
+                        used_by: data.user.id, // 关联当前注册用户ID
+                        used_at: new Date()
+                    })
+                    .eq('code', validInviteCode);
+
+                if (updateCodeError) throw updateCodeError;
+
+                // 3. 注册成功提示（根据是否开启邮箱验证显示不同提示）
+                const hasSession = !!data.session; // 关闭邮箱确认时通常会返回session
+                if (hasSession) {
+                    successEl.textContent = '注册成功，可直接登录';
+                    successEl.classList.remove('hidden');
+
+                    // 3.1 注册成功且已登录：发放初始积分 +4（事务记录）
+                    try {
+                        await supabase
+                            .from('points_transactions')
+                            .insert([{ user_id: data.user.id, type: 'earn', amount: 4, note: '注册奖励：首次注册发放4积分' }]);
+                    } catch (awardErr) {
+                        console.warn('注册奖励积分发放失败（稍后首登会重试）:', awardErr?.message || awardErr);
+                    }
+                } else {
+                    successEl.innerHTML = `
+                        <div>注册成功，已向 ${email} 发送验证邮件，请打开邮箱完成验证后再登录。</div>
+                        <button id="resend-email-btn" class="mt-2 px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">重新发送验证邮件</button>
+                    `;
+                    successEl.classList.remove('hidden');
+                    const resendBtn = document.getElementById('resend-email-btn');
+                    if (resendBtn) {
+                        resendBtn.addEventListener('click', async () => {
+                            try {
+                                const { error: resendErr } = await supabase.auth.resend({ type: 'signup', email: email });
+                                if (resendErr) throw resendErr;
+                                resendBtn.textContent = '已重新发送，请查收';
+                                resendBtn.disabled = true;
+                                resendBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                                resendBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                            } catch (e) {
+                                errorEl.textContent = '重发失败，请稍后重试';
+                                errorEl.classList.remove('hidden');
+                            }
+                        });
+                    }
+                }
+
+                document.getElementById('register-form').reset();
+                validInviteCode = null;
+                document.getElementById('register-btn').disabled = true;
+                document.getElementById('register-btn').classList.add('bg-gray-400', 'cursor-not-allowed');
+                document.getElementById('register-btn').classList.remove('bg-blue-600', 'hover:bg-blue-700');
+
+            } catch (err) {
+                console.error('注册失败:', err);
+                if (err.message.includes('User already registered')) {
+                    errorEl.textContent = '该邮箱已被注册';
+                } else {
+                    errorEl.textContent = '注册失败，请稍后重试';
+                }
+                errorEl.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Steam账号管理系统（商户后台）</title>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", sans-serif; }
+    body { background-color: #f5f5f5; color: #333; min-height: 100vh; }
+    .nav { background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; }
+    .nav-logo i { color: #2196f3; font-size: 24px; }
+    .nav-logo span { font-size: 18px; font-weight: bold; }
+    .nav-logout { color: #f44336; border: none; background: transparent; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 4px; transition: background 0.2s; }
+    .nav-logout:hover { background: #fef2f2; }
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+    .tabs { display: flex; background: white; border-radius: 8px 8px 0 0; overflow: hidden; }
+    .tab-btn { flex: 1; text-align: center; padding: 15px 0; border: none; background: transparent; font-size: 16px; cursor: pointer; transition: all 0.2s; border-bottom: 3px solid transparent; }
+    .tab-btn.active { color: #2196f3; border-bottom-color: #2196f3; font-weight: 500; }
+    .tab-btn:hover:not(.active) { background: #f8f9fa; }
+    .tab-panel { display: none; background: white; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 20px; }
+    .tab-panel.active { display: block; }
+    .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 20px; }
+    .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .card-header i { width: 40px; height: 40px; border-radius: 50%; background: #e3f2fd; color: #2196f3; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .card-header h2 { font-size: 18px; font-weight: bold; color: #333; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    .table th, .table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid #eee; font-size: 14px; }
+    .table th { background: #f8f9fa; color: #666; font-weight: 500; }
+    .status { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+    .status-success { background: #f0fdf4; color: #16a34a; }
+    .status-error { background: #fee2e2; color: #dc2626; }
+    .status-warning { background: #fffbeb; color: #d97706; }
+    .operate { display: flex; gap: 8px; }
+    .operate-btn { border: none; background: transparent; font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: background 0.2s; display: flex; align-items: center; gap: 4px; }
+    .operate-pass { color: #16a34a; }
+    .operate-pass:hover { background: #f0fdf4; }
+    .operate-reject { color: #dc2626; }
+    .operate-reject:hover { background: #fee2e2; }
+    .debug-area { position: fixed; bottom: 0; left: 0; right: 0; background: white; padding: 10px 20px; box-shadow: 0 -2px 8px rgba(0,0,0,0.05); font-size: 12px; z-index: 99; }
+    .debug-output { margin-top: 8px; color: #666; max-height: 100px; overflow-y: auto; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-logo">
+      <i class="fa fa-steam"></i>
+      <span>Steam账号管理系统</span>
+    </div>
+    <button id="logout-btn" class="nav-logout"><i class="fa fa-sign-out"></i>退出登录</button>
+  </nav>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn" data-tab="account-audit">账号批量插入</button>
+      <button class="tab-btn active" data-tab="recycle-audit">回收申请审核</button>
+      <button class="tab-btn" data-tab="points-audit">积分兑换审核</button>
+    </div>
+    <div id="add-alert" class="alert" style="margin:12px 0; display:none;"></div>
+
+    <div class="tab-panel" id="account-audit">
+      <div class="card">
+        <div class="card-header"><i class="fa fa-upload"></i><h2>账号批量插入</h2></div>
+        <div>
+          <p style="color:#666; margin-bottom:8px;">按行粘贴，格式：<code>用户名,密码,类型(basic|premium)</code></p>
+          <textarea id="bulk-input" rows="8" style="width:100%; border:1px solid #eee; border-radius:6px; padding:10px; font-size:13px;" placeholder="示例：\nuser001,pass001,basic\nuser002,pass002,premium"></textarea>
+          <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
+            <button id="bulk-insert-btn" class="operate-btn operate-pass" style="border:1px solid #e5e7eb; padding:6px 10px;"><i class="fa fa-upload"></i> 批量插入</button>
+            <span id="bulk-result" style="color:#999; font-size:12px;"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-panel active" id="recycle-audit">
+      <div class="card">
+-        <div class="card-header"><i class="fa fa-refresh"></i><h2>回收申请审核列表</h2></div>
++        <div class="card-header" style="display:flex; align-items:center; gap:10px;"><i class="fa fa-refresh"></i><h2>回收申请审核列表</h2><div style="display:flex; align-items:center; gap:8px; margin-left:auto;"><label style="font-size:12px; color:#666;">开始</label><input type="datetime-local" id="approved-start" style="border:1px solid #e5e7eb; padding:6px 8px; border-radius:6px; font-size:12px;" /><label style="font-size:12px; color:#666;">结束</label><input type="datetime-local" id="approved-end" style="border:1px solid #e5e7eb; padding:6px 8px; border-radius:6px; font-size:12px;" /><button id="export-approved-time-btn" class="operate-btn" style="border:1px solid #e5e7eb; padding:6px 10px;"><i class="fa fa-calendar"></i> 按审核时间导出</button><button id="export-approved-btn" class="operate-btn" style="border:1px solid #e5e7eb; padding:6px 10px;"><i class="fa fa-download"></i> 导出已通过</button></div></div>
+        <table class="table">
+          <thead>
+            <tr><th>账号</th><th>等级</th><th>哈夫币</th><th>提交时间</th><th>状态</th><th>操作</th></tr>
+          </thead>
+          <tbody id="recycle-table-body">
+            <tr><td colspan="6" style="text-align:center; padding:30px; color:#999;"><i class="fa fa-circle-o-notch fa-spin" style="font-size:20px; margin-bottom:10px; display:block;"></i>加载回收申请中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tab-panel" id="points-audit">
+      <div class="card">
+        <div class="card-header"><i class="fa fa-diamond"></i><h2>积分兑换审核列表</h2></div>
+        <table class="table">
+          <thead>
+            <tr><th>用户</th><th>积分</th><th>时间</th><th>收款码</th><th>状态</th><th>操作</th></tr>
+          </thead>
+          <tbody id="points-table-body">
+            <tr><td colspan="6" style="text-align:center; padding:30px; color:#999;"><i class="fa fa-folder-open-o" style="font-size:24px; margin-bottom:10px; display:block;"></i>暂未实现积分审核展示</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="debug-area">
+    <h4 style="margin:0 0 8px 0; color:#666; display:inline-block;">调试工具</h4>
+    <button id="debug-account" class="btn btn-default" style="font-size:12px; padding:4px 8px; margin-left:10px;">检查账号表</button>
+    <button id="debug-current-user" class="btn btn-default" style="font-size:12px; padding:4px 8px; margin-left:5px;">检查当前用户</button>
+    <button id="debug-recycle" class="btn btn-default" style="font-size:12px; padding:4px 8px; margin-left:5px;">检查回收申请</button>
+    <div class="debug-output" id="debug-output"></div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('supabase.access_token');
+    const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+    function showAlert(elId, message, type = 'success') {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.className = `alert alert-${type}`;
+      el.innerHTML = `<i class=\"fa ${type==='success'?'fa-check-circle':type==='error'?'fa-exclamation-circle':'fa-circle-o-notch fa-spin'}\"></i>${message}`;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3500);
+    }
+    function formatTime(s){ return s ? new Date(s).toLocaleString() : '-'; }
+    async function checkAuth() {
+      if (!token) { window.location.href = 'merchant-login.html'; return false; }
+      try {
+        const r = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/auth/v1/user', {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs' }
+        });
+        if (r.ok) return true;
+        // token 可能过期，尝试用 refresh_token 刷新
+        const refreshToken = localStorage.getItem('supabase.refresh_token');
+        if (!refreshToken) { window.location.href = 'merchant-login.html'; return false; }
+        const rr = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/auth/v1/token?grant_type=refresh_token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs' },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        if (!rr.ok) { window.location.href = 'merchant-login.html'; return false; }
+        const data = await rr.json();
+        token = data.access_token;
+        localStorage.setItem('supabase.access_token', token);
+        if (data.refresh_token) localStorage.setItem('supabase.refresh_token', data.refresh_token);
+        return true;
+      } catch { return false; }
+    }
+
+    async function loadPendingRecycle() {
+      try {
+        const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_applications?status=in.(pending,rejected,approved)&select=id,username,level,haf_coin,created_at,status,points&order=created_at.asc&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const apps = await resp.json();
+        // 调试：打印加载的申请数据，确认id是否存在
+        console.log('加载的回收申请数据：', apps);
+        const tbody = document.getElementById('recycle-table-body');
+        if (apps.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;"><i class=\"fa fa-folder-open-o\" style=\"font-size:24px; margin-bottom:10px; display:block;\"></i>暂无待审核、已拒绝或已通过的回收申请</td></tr>`;
+          return;
+        }
+        // 渲染列表：待审核、已拒绝、已通过（已通过显示积分并禁用操作）
+        tbody.innerHTML = apps.map(app => {
+          const isRejected = app.status === 'rejected';
+          const isApproved = app.status === 'approved';
+          const statusHtml = isRejected
+            ? '<span class="status status-error">已拒绝</span>'
+            : isApproved
+              ? `<span class="status status-success">积分：${app.points ?? '-'}</span>`
+              : '<span class="status status-warning">待审核</span>';
+          const operateHtml = isRejected
+            ? '<span style="color:#999;">已拒绝</span>'
+            : isApproved
+              ? '<span style="color:#999;">已通过</span>'
+              : `<button class="operate-btn operate-pass" onclick="auditRecycle('${app.id}', 'approved')"><i class="fa fa-check"></i>通过</button>
+               <button class="operate-btn operate-reject" onclick="auditRecycle('${app.id}', 'rejected')"><i class="fa fa-times"></i>拒绝</button>`;
+          return `
+          <tr>
+            <td>${app.username}</td>
+            <td>${app.level}</td>
+            <td><span class="status status-success">${app.haf_coin}</span></td>
+            <td>${formatTime(app.created_at)}</td>
+            <td>${statusHtml}</td>
+            <td class="operate">
+              <button class="operate-btn" onclick="viewScreenshots('${app.id}')"><i class="fa fa-image"></i>查看图片</button>
+              ${operateHtml}
+            </td>
+          </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        document.getElementById('recycle-table-body').innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#dc2626;"><i class=\"fa fa-exclamation-triangle\" style=\"font-size:20px; margin-bottom:10px; display:block;\"></i>加载失败: ${err.message}</td></tr>`;
+        console.error('回收审核加载错误：', err);
+      }
+    }
+
+    window.auditRecycle = async function(appId, result) {
+      // 调试：打印接收的appId，确认是否为有效UUID
+      console.log('接收的appId：', appId, '操作类型：', result);
+      
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      if (!confirm(`确定${result==='approved'?'通过':'拒绝'}回收申请？拒绝后记录将标记为已拒绝，用户可重新提交`)) return;
+      
+      try {
+        // 对appId进行URL编码，处理UUID中的特殊字符（如-）
+        const encodedAppId = encodeURIComponent(appId);
+        console.log('编码后的appId：', encodedAppId);
+
+        if (result === 'rejected') {
+          // 1. 获取主表记录（user_id）- 修正：去掉eq.后的单引号
+          const getAppResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_applications?id=eq.${encodedAppId}&select=id,user_id&limit=1&apikey=${anonKey}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.pgrst.object+json' }
+          });
+          if (!getAppResp.ok) throw new Error(`获取申请记录失败：${await getAppResp.text()}`);
+          const appData = await getAppResp.json();
+          const userId = Array.isArray(appData) ? (appData[0] && appData[0].user_id) : appData.user_id;
+          console.log('获取到的用户ID：', userId);
+
+          // 2. 预先获取截图文件列表（url 和 file_name）- 修正：先拿列表再删表，避免删表后查不到
+          let shots = [];
+          try {
+            const shotsResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_screenshots?application_id=eq.${encodedAppId}&select=url,file_name&apikey=${anonKey}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (shotsResp.ok) {
+              shots = await shotsResp.json();
+            } else {
+              console.warn('获取截图列表失败:', await shotsResp.text());
+            }
+          } catch (e) {
+            console.warn('获取截图列表异常:', e);
+          }
+          
+          // 3. 删除截图记录 - 修正：去掉eq.后的单引号
+          const delShotsResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_screenshots?application_id=eq.${encodedAppId}&apikey=${anonKey}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!delShotsResp.ok) console.warn('删除截图记录失败:', await delShotsResp.text());
+          else console.log('截图记录删除成功');
+
+          // 4. 删除 Storage 图片 - 优先从 url 解析 bucket/key，其次回退到 file_name
+          if (userId && shots.length > 0) {
+            for (const s of shots) {
+              let bucket = 'screenshots';
+              let key = '';
+              if (s.url && typeof s.url === 'string') {
+                try {
+                  const rawUrl = (s.url || '').trim().replace(/^`+|`+$/g, '');
+                  const u = new URL(rawUrl);
+                  // 形如 /storage/v1/object/(public|sign)/screenshots/<key>
+                  const parts = u.pathname.split('/').filter(Boolean);
+                  const idx = parts.indexOf('object');
+                  if (idx !== -1) {
+                    const after = parts.slice(idx + 1); // ["public"|"sign","screenshots", ...keyParts]
+                    if (after[0] === 'public' || after[0] === 'sign') after.shift();
+                    if (after.length >= 2) {
+                      bucket = after[0];
+                      key = decodeURIComponent(after.slice(1).join('/'));
+                    }
+                  }
+                } catch (e) {
+                  console.warn('解析截图URL失败，回退使用 file_name:', s.url, e);
+                }
+              }
+              // 规范化 key：去除重复的 userId 前缀
+              if (key && key.startsWith(`${userId}/${userId}/`)) {
+                key = key.slice(userId.length + 1);
+              }
+              if (!key) {
+                let fileKey = s.file_name || '';
+                if (!fileKey) { console.warn('空的 file_name，跳过'); continue; }
+                if (!fileKey.startsWith(`${userId}/`)) {
+                  fileKey = `${userId}/${fileKey}`;
+                }
+                key = fileKey;
+              }
+              // 再次规范化 key（应对回退后也可能出现双前缀的历史数据）
+              if (key.startsWith(`${userId}/${userId}/`)) {
+                key = key.slice(userId.length + 1);
+              }
+              const encodedKeyPath = encodeURIComponent(key).replace(/%2F/g,'/');
+              let delOk = false;
+              let respText = '';
+              let delObjResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/storage/v1/object/${bucket}/${encodedKeyPath}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (!delObjResp.ok) {
+                try { respText = await delObjResp.text(); } catch (_) {}
+                console.warn('首选key删除失败:', key, respText);
+                // 构造候选备用key：重复userId一层 或 去掉userId前缀
+                const candidates = [];
+                if (key.startsWith(`${userId}/`) && !key.startsWith(`${userId}/${userId}/`)) {
+                  candidates.push(`${userId}/${key}`);
+                  const withoutPrefix = key.slice(userId.length + 1);
+                  if (withoutPrefix) candidates.push(withoutPrefix);
+                }
+                for (const cand of candidates) {
+                  const enc = encodeURIComponent(cand).replace(/%2F/g,'/');
+                  console.log('尝试备用key删除:', cand);
+                  const r = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/storage/v1/object/${bucket}/${enc}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                  });
+                  if (r.ok) { delOk = true; delObjResp = r; break; }
+                  else {
+                    let t = '';
+                    try { t = await r.text(); } catch (_) {}
+                    console.warn('备用key删除失败:', cand, t);
+                  }
+                }
+              } else {
+                delOk = true;
+              }
+               if (!delOk) {
+                 const notFound = typeof respText === 'string' && /not_found/i.test(respText);
+                 if (notFound) {
+                   console.log('对象不存在，视为已删除:', s.file_name || key);
+                 } else {
+                   console.warn('删除Storage图片失败(全部尝试无果):', s.file_name || key, respText);
+                 }
+               } else {
+                 console.log('删除Storage图片成功:', s.file_name || key);
+               }
+            }
+          } else {
+            console.warn('未获取到用户ID或无截图列表，无法删除Storage图片');
+          }
+
+          // 5. 更新主申请记录状态为已拒绝（不删除主记录）
+          const patchBody = { status: 'rejected' };
+          const delAppResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_applications?id=eq.${encodedAppId}&apikey=${anonKey}`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(patchBody)
+          });
+          if (!delAppResp.ok) throw new Error(`更新主申请状态失败：${await delAppResp.text()}`);
+          console.log('主申请状态更新为已拒绝');
+
+          // 6. 提示并刷新
+          showAlert('add-alert', '回收申请已拒绝，记录已更新为已拒绝，图片已删除或不存在，用户可重新上传', 'success');
+          loadPendingRecycle();
+          return;
+        }
+
+        // 审核通过逻辑 - 修正：去掉eq.后的单引号
+        const body = { status: result };
+        if (result === 'approved') {
+          const input = prompt('请输入本次回收的积分数：', '100');
+          if (input === null) return;
+          const points = parseInt(input, 10);
+          if (isNaN(points) || points <= 0) { alert('请输入有效的正整数积分'); return; }
+          body.points = points;
+        }
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_applications?id=eq.${encodedAppId}&apikey=${anonKey}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        
+        // 审核通过后发放积分：插入 points_transactions（type='earn'）
+        if (result === 'approved') {
+          // 读取申请的用户ID
+          const getAppResp2 = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_applications?id=eq.${encodedAppId}&select=id,user_id&limit=1&apikey=${anonKey}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.pgrst.object+json' }
+          });
+          if (!getAppResp2.ok) throw new Error(`读取申请用户失败：${await getAppResp2.text()}`);
+          const appData2 = await getAppResp2.json();
+          const userId2 = Array.isArray(appData2) ? (appData2[0] && appData2[0].user_id) : appData2.user_id;
+          if (!userId2) throw new Error('无法获取申请的用户ID');
+          
+          // 调试：打印JWT中的email/sub以及插入payload
+          try {
+            const jwtPayload = JSON.parse(atob(token.split('.')[1]));
+            console.log('JWT claims for auditRecycle:', { email: jwtPayload.email, sub: jwtPayload.sub });
+          } catch (e) {
+            console.warn('JWT decode failed:', e);
+          }
+          const insertPayload = [{ user_id: userId2, type: 'earn', amount: body.points, application_id: appId, note: '回收通过奖励' }];
+          console.log('points_transactions insert payload:', insertPayload);
+          const rpcResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/rpc/award_points?apikey=${anonKey}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ p_application_id: appId, p_user_id: userId2, p_points: body.points, p_note: '回收通过奖励' })
+          });
+          if (!rpcResp.ok) throw new Error(`发放积分失败：${await rpcResp.text()}`);
+        }
+        
+        showAlert('add-alert', `回收申请已${result==='approved'?'通过，积分已发放：'+body.points:'拒绝'}`, 'success');
+        loadPendingRecycle();
+      } catch (err) {
+        showAlert('add-alert', `审核失败: ${err.message}`, 'error');
+        console.error('审核操作错误：', err);
+      }
+    };
+
+    // 查看截图功能（同步修复编码）- 修正：去掉eq.后的单引号
+    window.viewScreenshots = async function(appId){
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      try {
+        const encodedAppId = encodeURIComponent(appId);
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_screenshots?application_id=eq.${encodedAppId}&select=url,file_name&order=file_name.asc&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const imgs = await resp.json();
+
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:1000;';
+        const modal = document.createElement('div');
+        modal.style.cssText = 'background:#fff;border-radius:8px;max-width:900px;width:90%;max-height:80vh;overflow:auto;padding:16px;';
+        const header = document.createElement('div');
+        header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;';
+        header.innerHTML = '<h3 style="margin:0;font-size:16px;">申请图片</h3>';
+        const closeBtn = document.createElement('button');
+        closeBtn.innerHTML = '<i class="fa fa-times"></i>';
+        closeBtn.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:16px;color:#666;';
+        closeBtn.onclick = () => document.body.removeChild(overlay);
+        header.appendChild(closeBtn);
+
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;';
+
+        const publicBase = 'https://ubxbdfkpneeibbylkdwo.supabase.co/storage/v1/object/public/screenshots/';
+        if (imgs.length === 0) {
+          const empty = document.createElement('div');
+          empty.style.cssText = 'color:#666;padding:20px;text-align:center;';
+          empty.textContent = '暂无图片或无读取权限';
+          grid.appendChild(empty);
+        } else {
+          imgs.forEach(it => {
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'border:1px solid #eee;border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:6px;';
+            const img = document.createElement('img');
+            const fallbackPath = it.file_name ? publicBase + encodeURIComponent(it.file_name).replace(/%2F/g,'/') : '';
+            img.src = it.url || fallbackPath;
+            img.alt = it.file_name || '';
+            img.style.cssText = 'width:100%;height:120px;object-fit:cover;border-radius:4px;background:#fafafa;';
+            const caption = document.createElement('div');
+            caption.style.cssText = 'font-size:12px;color:#666;word-break:break-all;';
+            caption.textContent = it.file_name || '';
+            wrap.appendChild(img);
+            wrap.appendChild(caption);
+            grid.appendChild(wrap);
+          });
+        }
+
+        const footer = document.createElement('div');
+        footer.style.cssText = 'margin-top:12px;color:#666;font-size:12px;';
+        footer.textContent = `共 ${imgs.length} 张图片`;
+
+        modal.appendChild(header);
+        modal.appendChild(grid);
+        modal.appendChild(footer);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+      } catch (err) {
+        alert('读取图片失败：' + err.message);
+      }
+    };
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tabId = btn.getAttribute('data-tab');
+        document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        if (tabId === 'recycle-audit') loadPendingRecycle();
+        // 新增：切换到积分兑换审核时加载列表
+        if (tabId === 'points-audit') loadPointsRedemptions();
+      });
+    });
+
+    // 新增：加载积分兑换申请列表
+    async function loadPointsRedemptions() {
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      try {
+        const tbody = document.getElementById('points-table-body');
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;"><i class=\"fa fa-circle-o-notch fa-spin\" style=\"font-size:20px; margin-bottom:10px; display:block;\"></i>加载积分兑换申请中...</td></tr>`;
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/points_redemptions?select=id,user_id,points,status,created_at&order=created_at.asc&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const rows = await resp.json();
+        if (rows.length === 0) {
+          tbody.innerHTML = `<tr><td colspan=\"6\" style=\"text-align:center; padding:30px; color:#999;\"><i class=\"fa fa-folder-open-o\" style=\"font-size:24px; margin-bottom:10px; display:block;\"></i>暂无积分兑换申请</td></tr>`;
+          return;
+        }
+        // 拉取用户邮箱与收款码（优先 RPC 批量查询，失败则回退到 /users）
+        const ids = [...new Set(rows.map(r => r.user_id).filter(Boolean))];
+        let userMap = {};
+        if (ids.length > 0) {
+          // 先尝试调用 RPC list_user_qrcodes(p_user_ids uuid[])
+          try {
+            const rpcResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/rpc/list_user_qrcodes?apikey=${anonKey}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation', 'Authorization': `Bearer ${token}`, 'apikey': anonKey },
+              body: JSON.stringify({ p_user_ids: ids })
+            });
+            if (rpcResp.ok) {
+              const rrows = await rpcResp.json();
+              rrows.forEach(u => { userMap[u.user_id] = { id: u.user_id, wechat_qrcode_url: u.wechat_qrcode_url, email: u.email || null }; });
+            } else {
+              console.warn('RPC list_user_qrcodes 未能返回，回退到 /users 查询：', await rpcResp.text());
+            }
+          } catch (e) {
+            console.warn('调用 RPC list_user_qrcodes 异常，回退到 /users：', e);
+          }
+          // 回退：如果 RPC 未填充或部分缺失，补齐 /users 查询
+          const missing = ids.filter(id => !userMap[id]);
+          if (missing.length > 0) {
+            const list = missing.map(id => encodeURIComponent(id)).join(',');
+            try {
+              const uresp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/users?id=in.(${list})&select=id,wechat_qrcode_url&apikey=${anonKey}`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (uresp.ok) {
+                const urows = await uresp.json();
+                urows.forEach(u => { userMap[u.id] = u; });
+              } else {
+                console.warn('读取 users 表失败：', await uresp.text());
+              }
+            } catch (e) {
+              console.warn('读取 users 表异常：', e);
+            }
+          }
+        }
+        // 渲染
+        tbody.innerHTML = rows.map(r => {
+          const statusHtml = r.status === 'approved'
+            ? '<span class="status status-success">已发放</span>'
+            : r.status === 'rejected'
+              ? '<span class="status status-error">已拒绝</span>'
+              : '<span class="status status-warning">审核中</span>';
+          const operateHtml = r.status === 'pending'
+            ? `<button class=\"operate-btn operate-pass\" onclick=\"approveRedeem('${r.id}')\"><i class=\"fa fa-check\"></i>通过</button>
+               <button class=\"operate-btn operate-reject\" onclick=\"rejectRedeem('${r.id}')\"><i class=\"fa fa-times\"></i>拒绝</button>`
+            : '<span style="color:#999;">已处理</span>';
+          const u = userMap[r.user_id] || {};
+          const email = u.email || r.user_id;
+          const qrcodeBtn = u.wechat_qrcode_url
+            ? `<button class=\"operate-btn\" onclick=\"viewQrcode('${encodeURIComponent(u.wechat_qrcode_url)}')\"><i class=\"fa fa-qrcode\"></i>查看收款码</button>`
+            : '<span style="color:#999;">未上传</span>';
+          return `
+            <tr>
+              <td>${email}</td>
+              <td><span class="status status-success">${r.points}</span></td>
+              <td>${formatTime(r.created_at)}</td>
+              <td class="operate">${qrcodeBtn}</td>
+              <td>${statusHtml}</td>
+              <td class="operate">${operateHtml}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        showAlert('add-alert', `读取积分兑换失败: ${err.message}`, 'error');
+        console.error('读取积分兑换错误：', err);
+      }
+    }
+
+    // 新增：微信收款码预览
+    window.viewQrcode = function (encodedUrl) {
+      try {
+        const url = decodeURIComponent(encodedUrl || '');
+        if (!url) { alert('未找到收款码地址'); return; }
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.65);z-index:9999;';
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:8px;max-width:90vw;max-height:90vh;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2);';
+        const title = document.createElement('div');
+        title.textContent = '微信收款码预览';
+        title.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:12px;';
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '收款码';
+        img.style.cssText = 'max-width:80vw;max-height:70vh;display:block;margin:0 auto;';
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '关闭';
+        closeBtn.className = 'operate-btn';
+        closeBtn.style.cssText = 'margin-top:12px;';
+        closeBtn.onclick = () => { if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+        overlay.onclick = (e) => { if (e.target === overlay) { if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); } };
+        modal.appendChild(title);
+        modal.appendChild(img);
+        modal.appendChild(closeBtn);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+      } catch (err) {
+        alert('预览收款码失败：' + err.message);
+      }
+    };
+
+    // 新增：审批通过（调用后端 RPC approve_redeem）
+    window.approveRedeem = async function (redeemId) {
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      try {
+        const encodedId = encodeURIComponent(redeemId);
+        // 预检查：确认记录存在且可见
+        const pre = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/points_redemptions?id=eq.${encodedId}&select=id,status,user_id,points,created_at&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+        });
+        if (!pre.ok) throw new Error(await pre.text());
+        const preData = await pre.json();
+        if (!Array.isArray(preData) || preData.length === 0) {
+          throw new Error('记录不可见或不存在：请检查 RLS 查看权限或记录ID');
+        }
+        const currentStatus = preData[0].status;
+        if (currentStatus !== 'pending') {
+          throw new Error(`当前状态为 ${currentStatus}，仅待审核(pending)记录允许审批`);
+        }
+
+        const txn = prompt('请输入转账单号：');
+        if (txn === null) return;
+        const body = { status: 'approved', transaction_id: txn || null };
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/points_redemptions?id=eq.${encodedId}&apikey=${anonKey}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation', 'Authorization': `Bearer ${token}`, 'apikey': anonKey },
+          body: JSON.stringify(body)
+        });
+        if (!resp.ok) {
+          const text = await resp.text();
+          let parsed = null;
+          try { parsed = JSON.parse(text); } catch (e) {}
+          if (parsed && parsed.message && parsed.message.includes('transaction_id')) {
+            const fallbackResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/points_redemptions?id=eq.${encodedId}&apikey=${anonKey}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation', 'Authorization': `Bearer ${token}`, 'apikey': anonKey },
+              body: JSON.stringify({ status: 'approved' })
+            });
+            if (!fallbackResp.ok) throw new Error(await fallbackResp.text());
+            const fbData = await fallbackResp.json();
+            if (!Array.isArray(fbData) || fbData.length === 0) {
+              throw new Error('未更新任何记录，可能记录不存在或无权限');
+            }
+            showAlert('add-alert', '兑换已通过，但后端缺少 transaction_id 列，未保存单号', 'success');
+          } else {
+            throw new Error(text);
+          }
+        } else {
+          const data = await resp.json();
+          if (!Array.isArray(data) || data.length === 0) {
+            throw new Error('未更新任何记录，可能记录不存在或无权限');
+          }
+          showAlert('add-alert', '兑换已通过并记录单号', 'success');
+        }
+        await loadPointsRedemptions();
+      } catch (err) {
+        showAlert('add-alert', `兑换通过失败: ${err.message}`, 'error');
+        console.error('兑换通过错误：', err);
+      }
+    };
+
+    // 新增：审批拒绝（调用后端 RPC reject_redeem）
+    window.rejectRedeem = async function (redeemId) {
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      try {
+        const encodedId = encodeURIComponent(redeemId);
+        // 预检查：确认记录存在且可见
+        const pre = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/points_redemptions?id=eq.${encodedId}&select=id,status,user_id,points,created_at&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+        });
+        if (!pre.ok) throw new Error(await pre.text());
+        const preData = await pre.json();
+        if (!Array.isArray(preData) || preData.length === 0) {
+          throw new Error('记录不可见或不存在：请检查 RLS 查看权限或记录ID');
+        }
+        const currentStatus = preData[0].status;
+        if (currentStatus !== 'pending') {
+          throw new Error(`当前状态为 ${currentStatus}，仅待审核(pending)记录允许审批`);
+        }
+
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/points_redemptions?id=eq.${encodedId}&apikey=${anonKey}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation', 'Authorization': `Bearer ${token}`, 'apikey': anonKey },
+          body: JSON.stringify({ status: 'rejected' })
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const data = await resp.json();
+        if (!Array.isArray(data) || data.length === 0) {
+          throw new Error('未更新任何记录，可能记录不存在或无权限');
+        }
+        // 审核拒绝：返还相应积分（改为调用后端 RPC reject_redeem，避免 RLS 拒绝）
+        try {
+          // 从当前登录 token 中解析审核人ID（sub）
+          let reviewerId = null;
+          try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            reviewerId = payload.sub;
+          } catch (e) {
+            console.warn('JWT 解析失败，无法获取审核人ID：', e);
+          }
+          if (!reviewerId) {
+            throw new Error('无法获取审核人ID，请重新登录后再试');
+          }
+          const rpcResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/rpc/reject_redeem?apikey=${anonKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation', 'Authorization': `Bearer ${token}`, 'apikey': anonKey },
+            body: JSON.stringify({ p_redeem_id: redeemId, p_reviewer_id: reviewerId, p_reason: '兑换拒绝返还积分' })
+          });
+          if (!rpcResp.ok) {
+            console.warn('返还积分失败（RPC）：', await rpcResp.text());
+            showAlert('add-alert', '兑换已拒绝，但返还积分失败，请稍后用后台修复', 'error');
+          } else {
+            showAlert('add-alert', '已拒绝兑换申请并返还积分', 'success');
+          }
+        } catch (refundErr) {
+          console.warn('返还积分异常（RPC）：', refundErr);
+          showAlert('add-alert', '兑换已拒绝，但返还积分异常，请稍后处理', 'error');
+        }
+        await loadPointsRedemptions();
+      } catch (err) {
+        showAlert('add-alert', `兑换拒绝失败: ${err.message}`, 'error');
+        console.error('兑换拒绝错误：', err);
+      }
+    };
+
+    async function init() {
+      const ok = await checkAuth();
+      if (ok) {
+        await loadPendingRecycle();
+        // 新增：页面加载后预取积分兑换列表
+        await loadPointsRedemptions();
+      }
+    }
+    
+    // 调试按钮事件
+    (function(){
+      const out = document.getElementById('debug-output');
+      const setOut = (msg) => { if (out) out.textContent = msg; };
+      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+
+      document.getElementById('debug-account').addEventListener('click', async () => {
+        setOut('检查账号表中...');
+        try {
+          const resp = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/merchants?select=*&limit=10', {
+            headers: { 'apikey': anonKey }
+          });
+          setOut(resp.ok ? `✅ 商户表记录: ${JSON.stringify(await resp.json(), null, 2)}` : `❌ 错误: ${await resp.text()}`);
+        } catch (e) { setOut(`❌ 失败: ${e.message}`); }
+      });
+
+      document.getElementById('debug-current-user').addEventListener('click', async () => {
+        setOut('检查当前用户中...');
+        try {
+          const ok = await checkAuth();
+          if (!ok) { setOut('❌ 未登录'); return; }
+          const resp = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/auth/v1/user', {
+            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+          });
+          setOut(resp.ok ? `✅ 用户信息: ${JSON.stringify(await resp.json(), null, 2)}` : `❌ 错误: ${await resp.text()}`);
+        } catch (e) { setOut(`❌ 失败: ${e.message}`); }
+      });
+
+      document.getElementById('debug-recycle').addEventListener('click', async () => {
+        setOut('检查回收申请中...');
+        try {
+          const ok = await checkAuth();
+          if (!ok) { setOut('❌ 未登录'); return; }
+          const resp = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_applications?status=eq.pending&select=*&order=created_at.asc', {
+            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+          });
+          setOut(resp.ok ? `✅ 回收申请: ${JSON.stringify(await resp.json(), null, 2)}` : `❌ 错误: ${await resp.text()}`);
+        } catch (e) { setOut(`❌ 失败: ${e.message}`); }
+      });
+    })();
+
+    init();
+
+    (function(){
+      const btn = document.getElementById('bulk-insert-btn');
+      const resultEl = document.getElementById('bulk-result');
+      const API_BASE = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+      function setResult(text, ok=true){ if(resultEl) { resultEl.textContent = text; resultEl.style.color = ok ? '#16a34a' : '#dc2626'; } }
+
+      async function getUserIdFromJWT() {
+        try {
+          const parts = (token || '').split('.');
+          if (parts.length < 2) return null;
+          const payload = JSON.parse(atob(parts[1]));
+          return payload.sub || payload.user_id || null;
+        } catch (_) { return null; }
+      }
+
+      async function columnSupported(col) {
+        try {
+          const resp = await fetch(`${API_BASE}/rest/v1/steam_accounts?select=${encodeURIComponent(col)}&limit=1`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+          });
+          return resp.ok;
+        } catch (_) { return false; }
+      }
+
+      async function getMerchantId(userId) {
+        try {
+          const resp = await fetch(`${API_BASE}/rest/v1/merchants?user_id=eq.${encodeURIComponent(userId)}&select=id&limit=1&apikey=${anonKey}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+          });
+          if (!resp.ok) return null;
+          const arr = await resp.json();
+          return Array.isArray(arr) && arr.length > 0 ? arr[0].id : null;
+        } catch (_) { return null; }
+      }
+
+      if (btn) {
+        btn.addEventListener('click', async () => {
+          const ok = await checkAuth();
+          if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+
+          const inputEl = document.getElementById('bulk-input');
+          const raw = (inputEl?.value || '').trim();
+          if (!raw) { showAlert('add-alert', '请输入待插入的账号数据', 'warning'); setResult(''); return; }
+
+          const userId = await getUserIdFromJWT();
+          if (!userId) { showAlert('add-alert', '无法解析用户ID，请重新登录后再试', 'error'); return; }
+
+          const supportCreatedBy = await columnSupported('created_by');
+          const supportMerchantId = await columnSupported('merchant_id');
+          let merchantId = null;
+          if (supportMerchantId) {
+            merchantId = await getMerchantId(userId);
+            if (!merchantId) {
+              showAlert('add-alert', '未找到商户记录，merchant_id 将不附带', 'warning');
+            }
+          }
+
+          const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+          const errors = [];
+          const payload = [];
+          lines.forEach((line, idx) => {
+            const parts = line.split(',').map(s => s.trim());
+            const username = parts[0];
+            const password = parts[1];
+            const type = (parts[2] || 'basic').toLowerCase();
+            if (!username || !password || !['basic','premium'].includes(type)) {
+              errors.push(`第${idx+1}行格式错误`);
+              return;
+            }
+            const row = { steam_username: username, steam_password: password, account_type: type, used_by: null };
+            if (supportCreatedBy) row.created_by = userId;
+            if (supportMerchantId && merchantId) row.merchant_id = merchantId;
+            payload.push(row);
+          });
+
+          if (errors.length > 0) { showAlert('add-alert', `格式错误：${errors.join('；')}`, 'error'); setResult(''); return; }
+
+          try {
+            setResult('插入中...', true);
+            const resp = await fetch(`${API_BASE}/rest/v1/steam_accounts`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation', 'Authorization': `Bearer ${token}`, 'apikey': anonKey },
+              body: JSON.stringify(payload)
+            });
+            const text = await resp.text();
+            if (!resp.ok) {
+              showAlert('add-alert', `插入失败：${text || resp.status}`, 'error');
+              setResult('插入失败', false);
+              return;
+            }
+            let data = [];
+            try { data = JSON.parse(text); } catch { data = []; }
+            const count = Array.isArray(data) ? data.length : payload.length;
+            showAlert('add-alert', `插入成功：${count} 条账号`, 'success');
+            setResult(`成功插入 ${count} 条账号`, true);
+            if (inputEl) inputEl.value = '';
+          } catch (e) {
+            console.error('批量插入异常：', e);
+            showAlert('add-alert', `插入异常：${e.message}`, 'error');
+            setResult('插入异常', false);
+          }
+        });
+      }
+    })();
+
+    // 新增：按审核时间筛选并批量导出（优先使用 recycle_applications.updated_at；无该列时回退到 points_transactions.created_at）
+    (function(){
+      const btn = document.getElementById('export-approved-time-btn');
+      const startEl = document.getElementById('approved-start');
+      const endEl = document.getElementById('approved-end');
+      if (!btn) return;
+
+      const BASE = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+      function toISO(v){ try { const d = new Date(v); return isNaN(d.getTime()) ? null : d.toISOString(); } catch { return null; } }
+
+      async function hasRecycleColumn(col){
+        try {
+          // 使用 select=* 读取一条记录并检查属性是否存在，避免直接选择不存在列导致 400
+          const resp = await fetch(`${BASE}/rest/v1/recycle_applications?select=*&limit=1&apikey=${anonKey}`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+          });
+          if (!resp.ok) return false;
+          const rows = await resp.json();
+          if (!Array.isArray(rows) || rows.length === 0) {
+            // 无数据时无法确认，保守返回 false（走交易时间回退逻辑）
+            return false;
+          }
+          return Object.prototype.hasOwnProperty.call(rows[0], col);
+        } catch { return false; }
+      }
+
+      async function fetchApprovedAppsByUpdatedAt(isoStart, isoEnd){
+        const url = `${BASE}/rest/v1/recycle_applications?status=eq.approved&updated_at=gte.${encodeURIComponent(isoStart)}&updated_at=lte.${encodeURIComponent(isoEnd)}&select=id,account_id,username,level,haf_coin,updated_at&order=updated_at.asc&apikey=${anonKey}`;
+        const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey } });
+        if (!resp.ok) throw new Error(await resp.text());
+        const rows = await resp.json();
+        return { apps: rows, approvedMap: Object.fromEntries(rows.map(r => [r.id, r.updated_at])) };
+      }
+
+      async function fetchApprovedAppsByTransactions(isoStart, isoEnd){
+        // 先用交易时间筛选出在区间内的 application_id
+        const txUrl = `${BASE}/rest/v1/points_transactions?type=eq.earn&created_at=gte.${encodeURIComponent(isoStart)}&created_at=lte.${encodeURIComponent(isoEnd)}&select=application_id,created_at&order=created_at.asc&apikey=${anonKey}`;
+        const txResp = await fetch(txUrl, { headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey } });
+        if (!txResp.ok) throw new Error(await txResp.text());
+        const txRows = (await txResp.json()).filter(tr => !!tr.application_id);
+        const approvedMap = {};
+        txRows.forEach(tr => {
+          const prev = approvedMap[tr.application_id];
+          if (!prev || new Date(tr.created_at) < new Date(prev)) approvedMap[tr.application_id] = tr.created_at;
+        });
+        const ids = Object.keys(approvedMap);
+        if (ids.length === 0) return { apps: [], approvedMap };
+        const list = ids.map(id => encodeURIComponent(id)).join(',');
+        const appsResp = await fetch(`${BASE}/rest/v1/recycle_applications?id=in.(${list})&select=id,account_id,username,level,haf_coin&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+        });
+        if (!appsResp.ok) throw new Error(await appsResp.text());
+        const apps = await appsResp.json();
+        return { apps, approvedMap };
+      }
+
+      async function fetchApprovedAppsByCreatedAt(isoStart, isoEnd){
+        const url = `${BASE}/rest/v1/recycle_applications?status=eq.approved&created_at=gte.${encodeURIComponent(isoStart)}&created_at=lte.${encodeURIComponent(isoEnd)}&select=id,account_id,username,level,haf_coin,created_at&order=created_at.asc&apikey=${anonKey}`;
+        const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey } });
+        if (!resp.ok) throw new Error(await resp.text());
+        const rows = await resp.json();
+        const approvedMap = Object.fromEntries(rows.map(r => [r.id, r.created_at]));
+        return { apps: rows, approvedMap };
+      }
+
+      btn.addEventListener('click', async () => {
+        const ok = await checkAuth();
+        if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+        const startVal = (startEl?.value || '').trim();
+        const endVal = (endEl?.value || '').trim();
+        if (!startVal || !endVal) { showAlert('add-alert', '请选择开始和结束时间', 'warning'); return; }
+        const isoStart = toISO(startVal);
+        const isoEnd = toISO(endVal);
+        if (!isoStart || !isoEnd) { showAlert('add-alert', '时间格式无效，请重新选择', 'error'); return; }
+        if (new Date(isoStart) > new Date(isoEnd)) { showAlert('add-alert', '开始时间不能大于结束时间', 'error'); return; }
+        try {
+          let apps = [], approvedMap = {};
+          ({ apps, approvedMap } = await fetchApprovedAppsByTransactions(isoStart, isoEnd));
+          if (!Array.isArray(apps) || apps.length === 0) {
+            // 交易时间内无记录，回退到提交时间（近似审核时间），提示用户
+            ({ apps, approvedMap } = await fetchApprovedAppsByCreatedAt(isoStart, isoEnd));
+            if (!Array.isArray(apps) || apps.length === 0) { showAlert('add-alert', '该时间范围内没有已通过的记录', 'warning'); return; }
+            showAlert('add-alert', '未检测到审核交易，已按提交时间近似筛选', 'warning');
+          }
+
+          const publicBase = `${BASE}/storage/v1/object/public/screenshots/`;
+
+          // 密码映射：先按 account_id 查，再按用户名回退
+          const accountIds = [...new Set(apps.map(a => a.account_id).filter(Boolean))];
+          let pwById = {};
+          if (accountIds.length > 0) {
+            const inStr = accountIds.map(id => encodeURIComponent(id)).join(',');
+            const pwResp = await fetch(`${BASE}/rest/v1/steam_accounts?id=in.(${inStr})&select=id,steam_username,steam_password&apikey=${anonKey}`, {
+           headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+         });
+         if (pwResp.ok) {
+           (await pwResp.json()).forEach(r => {
+             const dec = r.steam_password || '';
+             if (r.id) pwById[r.id] = dec;
+             if (r.steam_username) pwByName[r.steam_username] = dec;
+           });
+         }
+          }
+          const usernames = [...new Set(apps.map(a => a.username).filter(Boolean))];
+      let pwByName = {};
+      const needNameFallback = apps.some(a => !a.account_id || !pwById[a.account_id]);
+      if (needNameFallback && usernames.length > 0) {
+        const list = usernames.map(u => `%22${encodeURIComponent(u)}%22`).join(',');
+        const nameResp = await fetch(`${BASE}/rest/v1/steam_accounts?steam_username=in.(${list})&select=steam_username,steam_password&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+        });
+        if (nameResp.ok) {
+          (await nameResp.json()).forEach(r => {
+            const dec = r.steam_password || '';
+            pwByName[r.steam_username] = dec;
+          });
+        }
+      }
+          // 额外回退：一次性 OR 查询补全缺失密码
+          const missing = apps.filter(a => !(a.account_id && pwById[a.account_id]) && !(a.username && pwByName[a.username]));
+          if (missing.length > 0) {
+            const missingIds = [...new Set(missing.map(a => a.account_id).filter(Boolean))];
+            const missingNames = [...new Set(missing.map(a => a.username).filter(Boolean))];
+            if (missingIds.length > 0 || missingNames.length > 0) {
+              const orParts = [];
+              if (missingIds.length > 0) orParts.push(`id.in.(${missingIds.map(id => encodeURIComponent(id)).join(',')})`);
+              if (missingNames.length > 0) orParts.push(`steam_username.in.(${missingNames.map(n => `%22${encodeURIComponent(n)}%22`).join(',')})`);
+              const orQuery = `${BASE}/rest/v1/steam_accounts?or=(${orParts.join(',')})&select=id,steam_username,steam_password&apikey=${anonKey}`;
+               const orResp = await fetch(orQuery, { headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey } });
+               if (orResp.ok) {
+                 const rows = await orResp.json();
+                 rows.forEach(r => {
+                   const dec = r.steam_password || '';
+                   if (r.id) pwById[r.id] = dec;
+                   if (r.steam_username) pwByName[r.steam_username] = dec;
+                 });
+               }
+            }
+          }
+          const pwOf = a => a.account_id ? (pwById[a.account_id] || '') : (pwByName[a.username] || '');
+
+          // 图片映射：批量读取 recycle_screenshots
+          const appIds = apps.map(a => a.id);
+          let imgMap = {};
+          if (appIds.length > 0) {
+            const inStr = appIds.map(id => encodeURIComponent(id)).join(',');
+            const imgResp = await fetch(`${BASE}/rest/v1/recycle_screenshots?application_id=in.(${inStr})&select=application_id,url,file_name&order=application_id.asc,file_name.asc&apikey=${anonKey}`, {
+              headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+            });
+            if (imgResp.ok) {
+              const rows = await imgResp.json();
+              rows.forEach(it => {
+                const key = it.application_id;
+                const finalUrl = it.url || (it.file_name ? publicBase + encodeURIComponent(it.file_name).replace(/%2F/g,'/') : '');
+                if (!imgMap[key]) imgMap[key] = [];
+                if (finalUrl) imgMap[key].push(finalUrl);
+              });
+            }
+          }
+
+          // 生成 CSV（包含图片与审核时间）
+          const maxImages = Math.max(0, ...apps.map(a => (imgMap[a.id] || []).length));
+          const headers = ['username','password','level','haf_coin','approved_at'].concat(Array.from({ length: maxImages }, (_, i) => `image_${i+1}`));
+          const lines = [headers.join(',')];
+          apps.forEach(a => {
+            const pw = pwOf(a);
+            const approvedAt = approvedMap[a.id] ? new Date(approvedMap[a.id]).toLocaleString() : '';
+            const imgs = imgMap[a.id] || [];
+            const paddedImgs = Array.from({ length: maxImages }, (_, i) => imgs[i] || '');
+            const vals = [a.username || '', pw || '', a.level || '', (a.haf_coin ?? ''), approvedAt].concat(paddedImgs);
+            lines.push(vals.map(v => String(v).replace(/"/g,'""')).map(v => `"${v}"`).join(','));
+          });
+          const csv = lines.join('\n');
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const ts = new Date();
+          const name = `approved_accounts_by_time_${ts.getFullYear()}${String(ts.getMonth()+1).padStart(2,'0')}${String(ts.getDate()).padStart(2,'0')}_${String(ts.getHours()).padStart(2,'0')}${String(ts.getMinutes()).padStart(2,'0')}.csv`;
+          a.href = url; a.download = name;
+          document.body.appendChild(a); a.click();
+          document.body.removeChild(a); URL.revokeObjectURL(url);
+          showAlert('add-alert', `已按时间导出 ${apps.length} 条记录`, 'success');
+        } catch (e) {
+          console.error('按审核时间导出失败：', e);
+          showAlert('add-alert', `导出失败：${e.message}`, 'error');
+        }
+      });
+    })();
+  </script>
+</body>
+
+<!-- // 绑定导出按钮：导出已通过的账号、密码、等级、哈夫币、图片
+(function(){
+  const btn = document.getElementById('export-approved-btn');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    const ok = await checkAuth();
+    if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+    try {
+      const BASE = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+      const publicBase = `${BASE}/storage/v1/object/public/screenshots/`;
+      const resp = await fetch(`${BASE}/rest/v1/recycle_applications?status=eq.approved&select=id,account_id,username,level,haf_coin&order=created_at.asc&apikey=${anonKey}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      const apps = await resp.json();
+      if (!Array.isArray(apps) || apps.length === 0) { showAlert('add-alert', '没有已通过的回收申请', 'warning'); return; }
+
+      // 密码映射：先按 account_id 查，再按用户名回退
+      const accountIds = [...new Set(apps.map(a => a.account_id).filter(Boolean))];
+      let pwById = {};
+      if (accountIds.length > 0) {
+        const inStr = accountIds.map(id => encodeURIComponent(id)).join(',');
+        const pwResp = await fetch(`${BASE}/rest/v1/steam_accounts?id=in.(${inStr})&select=id,steam_username,steam_password&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+        });
+        if (pwResp.ok) {
+          (await pwResp.json()).forEach(r => {
+            const dec = r.steam_password || '';
+            if (r.id) pwById[r.id] = dec;
+            if (r.steam_username) pwByName[r.steam_username] = dec;
+          });
+        }
+      }
+      const usernames = [...new Set(apps.map(a => a.username).filter(Boolean))];
+      let pwByName = {};
+      const needNameFallback = apps.some(a => !a.account_id || !pwById[a.account_id]);
+      if (needNameFallback && usernames.length > 0) {
+        const list = usernames.map(u => encodeURIComponent(u)).join(',');
+        const nameResp = await fetch(`${BASE}/rest/v1/steam_accounts?steam_username=in.(${list})&select=steam_username,steam_password&apikey=${anonKey}`, {
+           headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+         });
+         if (nameResp.ok) {
+           (await nameResp.json()).forEach(r => {
+             const dec = r.steam_password || '';
+             pwByName[r.steam_username] = dec;
+           });
+         }
+      }
+      // 额外回退：一次性 OR 查询补全缺失密码
+      const missing = apps.filter(a => !(a.account_id && pwById[a.account_id]) && !(a.username && pwByName[a.username]));
+      if (missing.length > 0) {
+        const missingIds = [...new Set(missing.map(a => a.account_id).filter(Boolean))];
+        const missingNames = [...new Set(missing.map(a => a.username).filter(Boolean))];
+        if (missingIds.length > 0 || missingNames.length > 0) {
+          const orParts = [];
+          if (missingIds.length > 0) orParts.push(`id.in.(${missingIds.map(id => encodeURIComponent(id)).join(',')})`);
+          if (missingNames.length > 0) orParts.push(`steam_username.in.(${missingNames.map(n => `%22${encodeURIComponent(n)}%22`).join(',')})`);
+          const orQuery = `${BASE}/rest/v1/steam_accounts?or=(${orParts.join(',')})&select=id,steam_username,steam_password&apikey=${anonKey}`;
+          const orResp = await fetch(orQuery, { headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey } });
+          if (orResp.ok) {
+            const rows = await orResp.json();
+            rows.forEach(r => {
+              const dec = r.steam_password || '';
+              if (r.id) pwById[r.id] = dec;
+              if (r.steam_username) pwByName[r.steam_username] = dec;
+            });
+          }
+        }
+      }
+
+      // 图片映射：批量读取 recycle_screenshots
+      const appIds = apps.map(a => a.id);
+      let imgMap = {};
+      if (appIds.length > 0) {
+        const inStr = appIds.map(id => encodeURIComponent(id)).join(',');
+        const imgResp = await fetch(`${BASE}/rest/v1/recycle_screenshots?application_id=in.(${inStr})&select=application_id,url,file_name&order=application_id.asc,file_name.asc&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+        });
+        if (imgResp.ok) {
+          const rows = await imgResp.json();
+          rows.forEach(it => {
+            const key = it.application_id;
+            const finalUrl = it.url || (it.file_name ? publicBase + encodeURIComponent(it.file_name).replace(/%2F/g,'/') : '');
+            if (!imgMap[key]) imgMap[key] = [];
+            if (finalUrl) imgMap[key].push(finalUrl);
+          });
+        }
+      }
+
+      // 将图片拆成多列
+      const maxImages = Math.max(0, ...apps.map(a => (imgMap[a.id] || []).length));
+      const headers = ['username','password','level','haf_coin'].concat(Array.from({ length: maxImages }, (_, i) => `image_${i+1}`));
+      const lines = [headers.join(',')];
+      apps.forEach(a => {
+        const pw = a.account_id ? (pwById[a.account_id] || '') : (pwByName[a.username] || '');
+        const imgs = imgMap[a.id] || [];
+        const paddedImgs = Array.from({ length: maxImages }, (_, i) => imgs[i] || '');
+        const vals = [a.username || '', pw || '', a.level || '', (a.haf_coin ?? '')].concat(paddedImgs);
+        lines.push(vals.map(v => String(v).replace(/"/g,'""')).map(v => `"${v}"`).join(','));
+      });
+      const csv = lines.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ts = new Date();
+      const name = `approved_accounts_${ts.getFullYear()}${String(ts.getMonth()+1).padStart(2,'0')}${String(ts.getDate()).padStart(2,'0')}_${String(ts.getHours()).padStart(2,'0')}${String(ts.getMinutes()).padStart(2,'0')}.csv`;
+      a.href = url; a.download = name;
+      document.body.appendChild(a); a.click();
+      document.body.removeChild(a); URL.revokeObjectURL(url);
+      showAlert('add-alert', `已导出 ${apps.length} 条记录`, 'success');
+    } catch (e) {
+      console.error('导出失败：', e);
+      showAlert('add-alert', `导出失败：${e.message}`, 'error');
+    }
+  });
+})(); -->

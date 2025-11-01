@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - LEAL账号报单系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 本地CSS（若不存在可注释，避免404） -->
+    <!-- <link rel="stylesheet" href="css/style.css"> -->
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav id="navbar" class="bg-blue-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-xl font-bold">LEAL账号报单系统</a>
+            
+            <!-- 桌面导航 -->
+            <div class="hidden md:flex space-x-6">
+                <a href="index.html" class="hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="hover:text-blue-200 transition">积分兑换</a>
+                <div id="auth-links">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-button" class="md:hidden text-white focus:outline-none">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="md:hidden hidden bg-blue-700">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                <a href="index.html" class="py-2 hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="py-2 hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="py-2 hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="py-2 hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="py-2 hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="py-2 hover:text-blue-200 transition">积分兑换</a>
+                <div id="mobile-auth-links" class="py-2">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 联系客服模态框 -->
+    <div id="contact-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-80 p-6 relative">
+            <button id="contact-modal-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                <i class="fa fa-times"></i>
+            </button>
+            <h3 class="text-lg font-semibold mb-2">联系客服</h3>
+            <p class="text-gray-700">微信：<span class="font-mono font-bold text-blue-600">EACS12138</span></p>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button id="contact-modal-copy" class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">复制微信</button>
+                <button id="contact-modal-ok" class="border px-3 py-1.5 rounded hover:bg-gray-50">知道了</button>
+            </div>
+        </div>
+    </div>
+ 
+     <!-- 公告模态框 -->
+     <div id="announcement-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+         <div class="bg-white rounded-lg shadow-xl w-96 p-6 relative">
+             <button id="announcement-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                 <i class="fa fa-times"></i>
+             </button>
+             <h3 class="text-lg font-semibold mb-3">公告</h3>
+             <p class="text-gray-700 leading-relaxed">
+                 三角洲行情大跌，价格持续下减，对价格进行调整，等待市场回暖会相应提高价格
+             </p>
+             <div class="mt-6 flex justify-end">
+                 <button id="announcement-ack" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">我已知晓</button>
+             </div>
+         </div>
+     </div>
+ 
+     <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-md mx-auto">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">用户登录</h1>
+                <p class="text-gray-600 mt-2">请输入您的账号信息登录系统</p>
+            </div>
+            
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-gray-700 font-medium mb-2">邮箱</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i class="fa fa-envelope"></i>
+                            </span>
+                            <input type="email" id="email" name="email" 
+                                class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="请输入您的邮箱" required>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="password" class="block text-gray-700 font-medium mb-2">密码</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                <i class="fa fa-lock"></i>
+                            </span>
+                            <input type="password" id="password" name="password" 
+                                class="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                placeholder="请输入您的密码" required>
+                            <!-- 密码显示/隐藏按钮 -->
+                            <button type="button" id="toggle-password" 
+                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 transition">
+                                <i class="fa fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-2">
+                        <button type="submit" 
+                            class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition">
+                            登录
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="error-message" class="mt-4 text-red-500 text-center hidden"></div>
+                
+                <div class="mt-6 text-center">
+                    <p class="text-gray-600">
+                        还没有账号？ <a href="register.html" class="text-blue-600 hover:underline">立即注册</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">LEAL账号报单系统</h3>
+                    <p class="text-gray-400">高效管理账号获取与回收，便捷的积分兑换系统</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="announcement.html" class="hover:text-white transition">公告</a></li>
+                        <li><a href="contact.html" class="hover:text-white transition">联系客服</a></li>
+                        <li><a href="login.html" class="hover:text-white transition">登录</a></li>
+                        <li><a href="register.html" class="hover:text-white transition">注册</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">联系我们</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fa fa-envelope mr-2"></i> support@leal.com</li>
+                        <li><i class="fa fa-clock-o mr-2"></i> 工作时间：9:00-18:00（工作日）</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500">
+                <p>&copy; 2025 LEAL账号报单系统 版权所有</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Supabase客户端配置（作为模块引入） -->
+    <script src="js/supabase.js" type="module"></script>
+
+    <!-- 页面核心逻辑（合并所有必要功能，避免外部依赖） -->
+    <script type="module">
+        // 从supabase.js导入客户端实例
+        import { supabase } from './js/supabase.js';
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            initNavbar();          // 初始化导航菜单
+            checkIfLoggedIn();     // 检查是否已登录，已登录则跳转首页
+            bindPasswordToggle();  // 绑定密码显示/隐藏功能
+            bindLoginForm();       // 绑定登录表单提交事件
+        });
+
+        // 初始化移动端导航菜单
+        function initNavbar() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('hidden');
+            });
+            // 联系客服模态框交互
+            const contactModal = document.getElementById('contact-modal');
+            const openContactModal = () => {
+                if (!contactModal) return;
+                contactModal.classList.remove('hidden');
+                contactModal.classList.add('flex');
+            };
+            const closeContactModal = () => {
+                if (!contactModal) return;
+                contactModal.classList.add('hidden');
+                contactModal.classList.remove('flex');
+            };
+            document.querySelectorAll('a[href="contact.html"]').forEach((el) => {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openContactModal();
+                });
+            });
+            const btnClose = document.getElementById('contact-modal-close');
+            const btnOk = document.getElementById('contact-modal-ok');
+            const btnCopy = document.getElementById('contact-modal-copy');
+            btnClose && btnClose.addEventListener('click', closeContactModal);
+            btnOk && btnOk.addEventListener('click', closeContactModal);
+            contactModal && contactModal.addEventListener('click', (e) => {
+                if (e.target === contactModal) closeContactModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeContactModal();
+            });
+            btnCopy && btnCopy.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText('EACS12138');
+                    btnCopy.textContent = '已复制';
+                    setTimeout(() => (btnCopy.textContent = '复制微信'), 1500);
+                } catch (err) {
+                    alert('复制失败，请手动复制：EACS12138');
+                }
+            });
+
+            // 公告模态框交互与每日一次弹出
+            const announcementModal = document.getElementById('announcement-modal');
+            const btnAnnClose = document.getElementById('announcement-close');
+            const btnAnnAck = document.getElementById('announcement-ack');
+            const openAnnouncementModal = () => {
+                if (!announcementModal) return;
+                announcementModal.classList.remove('hidden');
+                announcementModal.classList.add('flex');
+            };
+            const closeAnnouncementModal = () => {
+                if (!announcementModal) return;
+                announcementModal.classList.add('hidden');
+                announcementModal.classList.remove('flex');
+            };
+            document.querySelectorAll('a[href="announcement.html"]').forEach((el) => {
+                el.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    openAnnouncementModal();
+                });
+            });
+            btnAnnClose && btnAnnClose.addEventListener('click', closeAnnouncementModal);
+            btnAnnAck && btnAnnAck.addEventListener('click', () => {
+                const todayKey = new Date().toISOString().slice(0, 10);
+                try { localStorage.setItem('announcement_ack_date', todayKey); } catch (_) {}
+                closeAnnouncementModal();
+            });
+            announcementModal && announcementModal.addEventListener('click', (e) => {
+                if (e.target === announcementModal) closeAnnouncementModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') closeAnnouncementModal();
+            });
+            try {
+                const todayKey = new Date().toISOString().slice(0, 10);
+                const ackDate = localStorage.getItem('announcement_ack_date');
+                if (ackDate !== todayKey) openAnnouncementModal();
+            } catch (_) {}
+        }
+
+        // 检查是否已登录（已登录则跳转到首页）
+        async function checkIfLoggedIn() {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session) {
+                    window.location.href = 'index.html';
+                }
+            } catch (err) {
+                console.error('检查登录状态失败:', err);
+            }
+        }
+
+        // 绑定密码显示/隐藏功能
+        function bindPasswordToggle() {
+            const toggleBtn = document.getElementById('toggle-password');
+            const passwordInput = document.getElementById('password');
+            
+            toggleBtn.addEventListener('click', () => {
+                // 切换密码框类型（password/text）
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                
+                // 切换图标（eye/eye-slash）
+                const icon = toggleBtn.querySelector('i');
+                if (type === 'password') {
+                    icon.classList.remove('fa-eye');
+                    icon.classList.add('fa-eye-slash');
+                } else {
+                    icon.classList.remove('fa-eye-slash');
+                    icon.classList.add('fa-eye');
+                }
+            });
+        }
+
+        // 绑定登录表单提交事件
+        function bindLoginForm() {
+            const form = document.getElementById('login-form');
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                handleLogin();
+            });
+        }
+
+        // 处理登录逻辑（增强错误处理）
+        async function handleLogin() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const errorElement = document.getElementById('error-message');
+            
+            // 重置错误消息
+            errorElement.classList.add('hidden');
+
+            // 前端基础验证
+            if (!email) {
+                errorElement.textContent = '请输入邮箱';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            if (!password) {
+                errorElement.textContent = '请输入密码';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                errorElement.textContent = '请输入有效的邮箱格式';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                // 调用Supabase登录接口
+                const { error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+                
+                if (error) throw error;
+                
+                // 登录成功，跳转到首页
+                window.location.href = 'index.html';
+            } catch (err) {
+                console.error('登录失败详情:', err);
+                // 细化错误提示
+                if (err.message.includes('Invalid login credentials')) {
+                    errorElement.textContent = '邮箱或密码错误，请重试';
+                } else if (err.message.includes('User not confirmed')) {
+                    errorElement.textContent = '账号未验证，请先验证邮箱';
+                } else if (err.message.includes('Network error')) {
+                    errorElement.textContent = '网络错误，请检查网络连接';
+                } else {
+                    errorElement.textContent = '登录失败，请稍后重试';
+                }
+                errorElement.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>

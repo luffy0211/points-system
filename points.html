@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>积分兑换 - LEAL账号报单系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* 上传区域核心样式 */
+        .upload-container {
+            position: relative;
+            overflow: hidden;
+        }
+        #wechat-qrcode {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+        .upload-overlay {
+            position: relative;
+            z-index: 1;
+        }
+        /* 预览模式：禁用覆盖的文件输入，避免遮挡预览图片与确认按钮 */
+        .upload-container.preview-mode #wechat-qrcode {
+            height: 0;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .gift-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .gift-card {
+            transition: all 0.3s ease;
+        }
+        .btn-primary {
+            background-color: #165DFF;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            background-color: #0E42D2;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- 导航栏 -->
+    <nav id="navbar" class="bg-blue-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="index.html" class="text-xl font-bold">LEAL账号报单系统</a>
+            
+            <!-- 桌面导航 -->
+            <div class="hidden md:flex space-x-6">
+                <a href="index.html" class="hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="hover:text-blue-200 transition font-semibold border-b-2 border-white">积分兑换</a>
+                <div id="auth-links">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-button" class="md:hidden text-white focus:outline-none">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+        <div id="mobile-menu" class="md:hidden hidden bg-blue-700">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                <a href="index.html" class="py-2 hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="py-2 hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="py-2 hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="py-2 hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="py-2 hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="py-2 hover:text-blue-200 transition font-semibold">积分兑换</a>
+                <div id="mobile-auth-links" class="py-2">
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 联系客服模态框 -->
+    <div id="contact-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-80 p-6 relative">
+            <button id="contact-modal-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                <i class="fa fa-times"></i>
+            </button>
+            <h3 class="text-lg font-semibold mb-2">联系客服</h3>
+            <p class="text-gray-700">微信：<span class="font-mono font-bold text-blue-600">EACS12138</span></p>
+            <div class="mt-4 flex justify-end space-x-2">
+                <button id="contact-modal-copy" class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">复制微信</button>
+                <button id="contact-modal-ok" class="border px-3 py-1.5 rounded hover:bg-gray-50">知道了</button>
+            </div>
+        </div>
+    </div>
+ 
+     <!-- 公告模态框 -->
+     <div id="announcement-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+         <div class="bg-white rounded-lg shadow-xl w-96 p-6 relative">
+             <button id="announcement-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+                 <i class="fa fa-times"></i>
+             </button>
+             <h3 class="text-lg font-semibold mb-3">公告</h3>
+             <p class="text-gray-700 leading-relaxed">
+                 三角洲行情大跌，价格持续下减，对价格进行调整，等待市场回暖会相应提高价格
+             </p>
+             <div class="mt-6 flex justify-end">
+                 <button id="announcement-ack" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">我已知晓</button>
+             </div>
+         </div>
+     </div>
+ 
+     <!-- 主内容区 -->
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center mb-10">
+                <h1 class="text-3xl font-bold text-gray-800">积分兑换</h1>
+                <p class="text-gray-600 mt-2">使用您的积分兑换奖励，我们将通过微信转账方式发放</p>
+            </div>
+            
+            <!-- 用户信息提示栏 -->
+            <div class="bg-blue-50 border border-blue-100 rounded-md p-4 mb-8">
+                <p class="text-gray-700">账号：<span id="user-account" class="font-medium">未登录</span></p>
+                <p class="text-gray-700">当前积分：<span id="current-points" class="font-medium">0</span>（兑换后需保留 ≥ 4分）</p>
+                <p class="text-gray-700">可用兑换积分：<span id="available-points" class="font-medium text-green-600">0</span></p>
+            </div>
+            
+            <!-- 微信收款码设置 -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-12">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">微信收款码设置</h2>
+                <p class="text-gray-600 mb-4">请上传您的微信收款码，<span class="text-red-500 font-medium">每个账号只能上传一次，上传后不可更改</span></p>
+                <!-- 收款码上传区域 -->
+                <div id="qrcode-upload-section" class="upload-container block border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 hover:bg-blue-50 transition cursor-pointer">
+                    <input type="file" id="wechat-qrcode" accept="image/*" class="" />
+                    <div class="upload-overlay">
+                        <div id="upload-prompt" class="space-y-3">
+                            <i class="fa fa-qrcode text-5xl text-gray-400"></i>
+                            <p class="text-gray-600">点击或拖拽微信收款码图片到此处上传</p>
+                            <p class="text-gray-500 text-sm">支持JPG、PNG格式，建议尺寸400×400像素，大小不超过2MB</p>
+                        </div>
+                        
+                        <!-- 上传预览区域 -->
+                        <div id="upload-preview" class="mt-6 hidden">
+                            <div class="inline-block border border-gray-200 rounded-lg p-2 bg-white">
+                                <img id="qrcode-img" src="" alt="微信收款码预览" class="max-w-full max-h-64" />
+                            </div>
+                            <p id="upload-status" class="mt-3 text-green-600 font-medium hidden">
+                                <i class="fa fa-check-circle"></i> 图片上传成功
+                            </p>
+                            <button id="confirm-upload" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-md transition hidden">
+                                确认上传
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 已上传状态 -->
+                <div id="qrcode-uploaded" class="hidden mt-6">
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <i class="fa fa-check-circle text-green-500 text-xl mt-1"></i>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-green-800">收款码已上传</h3>
+                                <div class="mt-2 text-sm text-green-700">
+                                    <p>您的微信收款码已成功上传，以下是预览图：</p>
+                                    <div class="mt-3 inline-block border border-gray-200 rounded-lg p-2 bg-white">
+                                        <img id="saved-qrcode-img" src="" alt="已保存的微信收款码" class="max-w-xs max-h-64" />
+                                    </div>
+                                    <p class="mt-3 text-red-500 text-sm"><i class="fa fa-info-circle"></i> 每个账号只能上传一次收款码，无法修改</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 上传错误提示 -->
+                <div id="upload-error" class="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md hidden">
+                    <p class="flex items-center">
+                        <i class="fa fa-times-circle mr-2"></i>
+                        <span id="error-message"></span>
+                    </p>
+                </div>
+                
+                <!-- 上传加载提示 -->
+                <div id="upload-loading" class="mt-4 text-center hidden">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                    <p class="mt-2 text-gray-600">上传中，请稍候...</p>
+                </div>
+            </div>
+            
+            <!-- 积分兑换申请（替代固定礼品） -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-12" id="redeem-form-section">
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">积分兑换申请</h2>
+                <p class="text-gray-600 mb-4">请输入要兑换的积分数量，审核通过后将打款至您绑定的微信收款码。<span class="text-gray-500">（兑换后需保留 ≥ 4分）</span></p>
+                <div class="flex items-center gap-4">
+                    <input type="number" id="redeem-amount" min="1" placeholder="输入积分数量" class="flex-1 border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300" />
+                    <button id="submit-redeem" class="btn-primary text-white py-2 px-6 rounded-md">提交兑换申请</button>
+                </div>
+                <p class="text-sm text-gray-500 mt-2">提示：提交申请后由商家审核，审核通过后扣减积分并发放款项。</p>
+            </div>
+            
+            <!-- 兑换记录 -->
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-6">我的兑换记录</h2>
+                
+                <div id="records-loading" class="text-center py-10">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                    <p class="mt-2 text-gray-600">加载记录中...</p>
+                </div>
+                
+                <div id="no-records" class="text-center py-10 bg-white rounded-lg shadow-md hidden">
+                    <i class="fa fa-folder-open text-5xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500">暂无兑换记录</p>
+                    <p class="text-gray-400 mt-2">提交兑换后，记录将显示在这里</p>
+                </div>
+                
+                <div id="records-container" class="bg-white rounded-lg shadow-md overflow-hidden hidden">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">礼品名称</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">消耗积分</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">兑换时间</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="records-list" class="bg-white divide-y divide-gray-200">
+                            <!-- 记录将通过JavaScript动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 兑换成功弹窗 -->
+    <div id="exchange-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div id="success-content" class="text-center hidden">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa fa-check text-2xl text-green-500"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">兑换申请提交成功</h3>
+                <p class="text-gray-600 mb-6">我们将在1-3个工作日内通过微信转账为您发放</p>
+                <button id="close-success" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition">
+                    确定
+                </button>
+            </div>
+            
+            <div id="error-content" class="text-center hidden">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa fa-times text-2xl text-red-500"></i>
+                </div>
+                <h3 class="text-xl font-bold mb-2">兑换失败</h3>
+                <p id="modal-error-message" class="text-gray-600 mb-6">请先上传微信收款码</p>
+                <button id="close-error" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md transition">
+                    确定
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">LEAL账号报单系统</h3>
+                    <p class="text-gray-400">高效管理账号获取与回收，便捷的积分兑换系统</p>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><a href="announcement.html" class="hover:text-white transition">公告</a></li>
+                        <li><a href="contact.html" class="hover:text-white transition">联系客服</a></li>
+                        <li><a href="login.html" class="hover:text-white transition">登录</a></li>
+                        <li><a href="register.html" class="hover:text-white transition">注册</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">联系我们</h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><i class="fa fa-envelope mr-2"></i> support@leal.com</li>
+                        <li><i class="fa fa-clock-o mr-2"></i> 工作时间：9:00-18:00（工作日）</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500">
+                © 2025 LEAL账号报单系统 版权所有
+            </div>
+        </div>
+    </footer>
+
+    <script type="module">
+        import { supabase } from './js/supabase.js';
+        
+        // 当前登录用户
+        let currentUser = null;
+        let hasQrcode = false;
+        let userPoints = { current: 0, available: 0 };
+        
+        // DOM元素
+        const mobileMenuButton = document.getElementById('mobile-menu-button');
+        const mobileMenu = document.getElementById('mobile-menu');
+        const userAccount = document.getElementById('user-account');
+        const currentPoints = document.getElementById('current-points');
+        const availablePoints = document.getElementById('available-points');
+        const wechatQrcode = document.getElementById('wechat-qrcode');
+        const qrcodeUploadSection = document.getElementById('qrcode-upload-section');
+        const uploadPrompt = document.getElementById('upload-prompt');
+        const uploadPreview = document.getElementById('upload-preview');
+        const qrcodeImg = document.getElementById('qrcode-img');
+        const uploadStatus = document.getElementById('upload-status');
+        const confirmUpload = document.getElementById('confirm-upload');
+        const qrcodeUploaded = document.getElementById('qrcode-uploaded');
+        const savedQrcodeImg = document.getElementById('saved-qrcode-img');
+        const uploadError = document.getElementById('upload-error');
+        const errorMessage = document.getElementById('error-message');
+        const uploadLoading = document.getElementById('upload-loading');
+        const redeemAmountInput = document.getElementById('redeem-amount');
+        const submitRedeemBtn = document.getElementById('submit-redeem');
+        // exchange buttons removed with gifts section
+        const exchangeModal = document.getElementById('exchange-modal');
+        const successContent = document.getElementById('success-content');
+        const errorContent = document.getElementById('error-content');
+        const modalErrorMessage = document.getElementById('modal-error-message');
+        const closeSuccess = document.getElementById('close-success');
+        const closeError = document.getElementById('close-error');
+        const recordsLoading = document.getElementById('records-loading');
+        const noRecords = document.getElementById('no-records');
+        const recordsContainer = document.getElementById('records-container');
+        const recordsList = document.getElementById('records-list');
+        
+        // 移动端菜单切换
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+        // 联系客服模态框交互
+        const contactModal = document.getElementById('contact-modal');
+        const openContactModal = () => {
+            if (!contactModal) return;
+            contactModal.classList.remove('hidden');
+            contactModal.classList.add('flex');
+        };
+        const closeContactModal = () => {
+            if (!contactModal) return;
+            contactModal.classList.add('hidden');
+            contactModal.classList.remove('flex');
+        };
+        document.querySelectorAll('a[href="contact.html"]').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                openContactModal();
+            });
+        });
+        const btnClose = document.getElementById('contact-modal-close');
+        const btnOk = document.getElementById('contact-modal-ok');
+        const btnCopy = document.getElementById('contact-modal-copy');
+        btnClose && btnClose.addEventListener('click', closeContactModal);
+        btnOk && btnOk.addEventListener('click', closeContactModal);
+        contactModal && contactModal.addEventListener('click', (e) => {
+            if (e.target === contactModal) closeContactModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeContactModal();
+        });
+        btnCopy && btnCopy.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText('EACS12138');
+                btnCopy.textContent = '已复制';
+                setTimeout(() => (btnCopy.textContent = '复制微信'), 1500);
+            } catch (err) {
+                alert('复制失败，请手动复制：EACS12138');
+            }
+        });
+
+        // 公告模态框交互与每日一次弹出
+        const announcementModal = document.getElementById('announcement-modal');
+        const btnAnnClose = document.getElementById('announcement-close');
+        const btnAnnAck = document.getElementById('announcement-ack');
+        const openAnnouncementModal = () => {
+            if (!announcementModal) return;
+            announcementModal.classList.remove('hidden');
+            announcementModal.classList.add('flex');
+        };
+        const closeAnnouncementModal = () => {
+            if (!announcementModal) return;
+            announcementModal.classList.add('hidden');
+            announcementModal.classList.remove('flex');
+        };
+        document.querySelectorAll('a[href="announcement.html"]').forEach((el) => {
+            el.addEventListener('click', (e) => {
+                e.preventDefault();
+                openAnnouncementModal();
+            });
+        });
+        btnAnnClose && btnAnnClose.addEventListener('click', closeAnnouncementModal);
+        announcementModal && announcementModal.addEventListener('click', (e) => {
+            if (e.target === announcementModal) closeAnnouncementModal();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAnnouncementModal();
+        });
+        btnAnnAck && btnAnnAck.addEventListener('click', () => {
+            const todayKey = new Date().toISOString().slice(0, 10);
+            try { localStorage.setItem('announcement_ack_date', todayKey); } catch (_) {}
+            closeAnnouncementModal();
+        });
+        try {
+            const todayKey = new Date().toISOString().slice(0, 10);
+            const ackDate = localStorage.getItem('announcement_ack_date');
+            if (ackDate !== todayKey) openAnnouncementModal();
+        } catch (_) {}
+
+        
+        // 处理收款码预览
+        wechatQrcode.addEventListener('change', (e) => {
+            if (!currentUser) {
+                showError('请先登录后再上传收款码');
+                return;
+            }
+            
+            if (hasQrcode) {
+                showError('您已上传过收款码，无法再次上传');
+                return;
+            }
+            
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // 验证文件类型和大小
+            if (!file.type.match(/image\/(jpeg|png|jpg)/)) {
+                showError('仅支持JPG、PNG格式的图片');
+                wechatQrcode.value = '';
+                return;
+            }
+            
+            if (file.size > 2 * 1024 * 1024) {
+                showError('图片大小不能超过2MB');
+                wechatQrcode.value = '';
+                return;
+            }
+            
+            // 显示预览
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                qrcodeImg.src = event.target.result;
+                uploadPrompt.classList.add('hidden');
+                uploadPreview.classList.remove('hidden');
+                confirmUpload.classList.remove('hidden');
+                // 进入预览模式，避免文件输入覆盖造成按钮不可点击
+                qrcodeUploadSection.classList.add('preview-mode');
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        // 确认上传收款码
+        confirmUpload.addEventListener('click', async () => {
+            if (!currentUser) return;
+            
+            const file = wechatQrcode.files[0];
+            if (!file) return;
+            
+            try {
+                // 显示加载状态
+                uploadLoading.classList.remove('hidden');
+                confirmUpload.classList.add('hidden');
+                uploadError.classList.add('hidden');
+                
+                // 上传文件到Supabase存储桶
+                const fileName = `wechat_qrcode_${currentUser.id}_${Date.now()}.${file.name.split('.').pop()}`;
+                const { error: storageUploadError } = await supabase
+                    .storage
+                    .from('wechat_qrcodes')
+                    .upload(fileName, file);
+                
+                if (storageUploadError) throw storageUploadError;
+                
+                // 获取公开URL
+                const { data: urlData } = await supabase
+                    .storage
+                    .from('wechat_qrcodes')
+                    .getPublicUrl(fileName);
+                
+                // 保存URL到用户表
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ wechat_qrcode_url: urlData.publicUrl })
+                    .eq('id', currentUser.id);
+                
+                if (updateError) throw updateError;
+                
+                // 显示成功状态
+                uploadStatus.classList.remove('hidden');
+                uploadLoading.classList.add('hidden');
+                
+                // 更新状态变量
+                hasQrcode = true;
+                
+                // 显示已上传区域
+                setTimeout(() => {
+                    savedQrcodeImg.src = urlData.publicUrl;
+                    qrcodeUploadSection.classList.add('hidden');
+                    qrcodeUploaded.classList.remove('hidden');
+                }, 1000);
+                
+            } catch (error) {
+                console.error('上传收款码失败:', error);
+                uploadLoading.classList.add('hidden');
+                showError('上传失败: ' + error.message);
+            }
+        });
+        
+        // 兑换按钮点击事件（改为：提交自定义积分兑换申请）
+        if (submitRedeemBtn) {
+            submitRedeemBtn.addEventListener('click', async () => {
+                if (!currentUser) {
+                    window.location.href = `login.html?redirect=points.html`;
+                    return;
+                }
+                if (!hasQrcode) {
+                    showModalError('请先上传微信收款码才能进行兑换');
+                    return;
+                }
+                const amount = parseInt(redeemAmountInput.value, 10);
+                if (isNaN(amount) || amount <= 0) {
+                    showModalError('请输入有效的正整数积分数量');
+                    return;
+                }
+                // 可选：前端校验兑换后保留≥4分
+                if ((userPoints.available - amount) < 4) {
+                    showModalError('兑换后需保留 ≥ 4分，请调整兑换数量');
+                    return;
+                }
+                try {
+                    // 创建积分兑换申请，等待商家审核，并立即扣除相应积分
+                    const { data: inserted, error: exError } = await supabase
+                        .from('points_redemptions')
+                        .insert([{ user_id: currentUser.id, points: amount, status: 'pending', created_at: new Date().toISOString() }])
+                        .select('*')
+                        .limit(1);
+                    if (exError) throw exError;
+                    const redeemRow = Array.isArray(inserted) ? inserted[0] : inserted;
+                    if (!redeemRow || !redeemRow.id) throw new Error('兑换记录创建失败');
+
+                    // 立即记录扣分交易：type='redeem'，amount为兑换积分；暂不关联 application_id 以避免外键冲突
+                    const { error: spendErr } = await supabase
+                        .from('points_transactions')
+                        .insert([{ user_id: currentUser.id, type: 'redeem', amount: amount, note: `发起积分兑换扣除（redeem_id=${redeemRow.id}）` }]);
+                    if (spendErr) {
+                        // 尝试回滚：删除刚创建的兑换记录（若RLS允许）
+                        try {
+                            await supabase.from('points_redemptions').delete().eq('id', redeemRow.id);
+                        } catch (rbErr) {
+                            console.warn('扣分失败且兑换记录回滚失败，请手动处理：', rbErr?.message || rbErr);
+                        }
+                        throw spendErr;
+                    }
+
+                    showModalSuccess();
+                    // 刷新积分和记录列表
+                    const { data: summary2 } = await supabase
+                        .from('user_points_summary')
+                        .select('total_earned, available_points')
+                        .eq('user_id', currentUser.id)
+                        .single();
+                    if (summary2) {
+                        userPoints.current = summary2.total_earned || 0;
+                        userPoints.available = summary2.available_points || 0;
+                        currentPoints.textContent = userPoints.current;
+                        availablePoints.textContent = userPoints.available;
+                    }
+                    fetchExchangeRecords();
+                } catch (error) {
+                    console.error('提交兑换申请失败:', error);
+                    showModalError('提交失败: ' + (error.message || error));
+                }
+            });
+        }
+        
+        // 关闭弹窗事件
+        closeSuccess.addEventListener('click', () => {
+            exchangeModal.classList.add('hidden');
+            successContent.classList.add('hidden');
+        });
+        
+        closeError.addEventListener('click', () => {
+            exchangeModal.classList.add('hidden');
+            errorContent.classList.add('hidden');
+        });
+        
+        // 显示错误提示
+        function showError(message) {
+            errorMessage.textContent = message;
+            uploadError.classList.remove('hidden');
+            
+            // 3秒后自动隐藏
+            setTimeout(() => {
+                uploadError.classList.add('hidden');
+            }, 3000);
+        }
+        
+        // 显示成功弹窗
+        function showModalSuccess() {
+            exchangeModal.classList.remove('hidden');
+            successContent.classList.remove('hidden');
+            errorContent.classList.add('hidden');
+        }
+        
+        // 显示错误弹窗
+        function showModalError(message) {
+            modalErrorMessage.textContent = message;
+            exchangeModal.classList.remove('hidden');
+            errorContent.classList.remove('hidden');
+            successContent.classList.add('hidden');
+        }
+        
+        // 获取用户兑换记录
+        async function fetchExchangeRecords() {
+            if (!currentUser) return;
+            try {
+                recordsLoading.classList.remove('hidden');
+                noRecords.classList.add('hidden');
+                recordsContainer.classList.add('hidden');
+                const { data, error } = await supabase
+                    .from('points_redemptions')
+                    .select('*')
+                    .eq('user_id', currentUser.id)
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                if (!data || data.length === 0) {
+                    noRecords.classList.remove('hidden');
+                } else {
+                    recordsContainer.classList.remove('hidden');
+                    recordsList.innerHTML = '';
+                    data.forEach(record => {
+                        let statusClass = '';
+                        let statusText = '';
+                        switch (record.status) {
+                            case 'pending':
+                                statusClass = 'bg-yellow-100 text-yellow-800';
+                                statusText = '审核中';
+                                break;
+                            case 'approved':
+                                statusClass = 'bg-green-100 text-green-800';
+                                statusText = '已发放';
+                                break;
+                            case 'rejected':
+                                statusClass = 'bg-red-100 text-red-800';
+                                statusText = '已拒绝';
+                                break;
+                            default:
+                                statusClass = 'bg-gray-100 text-gray-800';
+                                statusText = record.status;
+                        }
+                        const createdAt = new Date(record.created_at);
+                        const formattedDate = createdAt.toLocaleString('zh-CN');
+                        const row = document.createElement('tr');
+                        row.className = 'hover:bg-gray-50 transition';
+                        row.innerHTML = `
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">积分兑换</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">${record.points}积分</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">${formattedDate}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                                    ${statusText}
+                                </span>
+                                ${record.status === 'approved' && record.transaction_id ? `<div class="text-xs text-gray-500 mt-1">单号：${record.transaction_id}</div>` : ''}
+                            </td>
+                        `;
+                        recordsList.appendChild(row);
+                    });
+                }
+            } catch (error) {
+                console.error('获取兑换记录失败:', error);
+                noRecords.classList.remove('hidden');
+                noRecords.innerHTML = `
+                    <i class="fa fa-exclamation-triangle text-5xl text-yellow-400 mb-3"></i>
+                    <p class="text-gray-500">加载记录失败</p>
+                    <p class="text-gray-400 mt-2">请刷新页面重试</p>
+                `;
+            } finally {
+                recordsLoading.classList.add('hidden');
+            }
+        }
+        
+        // 检查用户登录状态
+        async function checkAuth() {
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (session) {
+                currentUser = session.user;
+                
+                // 新增：确保 users 表中存在当前用户行（首登自动创建）
+                try {
+                    const { error: upsertErr } = await supabase
+                        .from('users')
+                        .upsert({ id: currentUser.id, username: session.user.email.split('@')[0] }, { onConflict: 'id' });
+                    if (upsertErr) console.warn('users upsert 警告:', upsertErr.message);
+                } catch (e) {
+                    console.warn('users upsert 失败（忽略，不影响后续）:', e.message);
+                }
+                
+                // 更新导航栏
+                document.getElementById('auth-links').innerHTML = `
+                    <span id="user-email" class="mr-3">${session.user.email}</span>
+                    <span id="user-points" class="mr-3">积分：加载中</span>
+                    <button id="logout-btn" class="hover:text-blue-200 transition">退出登录</button>
+                `;
+                
+                document.getElementById('mobile-auth-links').innerHTML = `
+                    <span id="mobile-user-email">${session.user.email}</span>
+                    <span id="mobile-user-points" class="ml-3">积分：加载中</span>
+                    <button id="mobile-logout-btn" class="hover:text-blue-200 transition ml-3">退出登录</button>
+                `;
+                
+                // 添加退出登录事件
+                document.getElementById('logout-btn').addEventListener('click', logout);
+                document.getElementById('mobile-logout-btn').addEventListener('click', logout);
+                
+                // 获取用户基本信息（用户名、收款码）
+                const { data: userData } = await supabase
+                    .from('users')
+                    .select('username, wechat_qrcode_url')
+                    .eq('id', currentUser.id)
+                    .single();
+                
+                if (userData) {
+                    // 更新用户信息显示
+                    userAccount.textContent = userData.username || session.user.email.split('@')[0];
+                    
+                    // 检查是否已上传收款码
+                    if (userData.wechat_qrcode_url) {
+                        hasQrcode = true;
+                        savedQrcodeImg.src = userData.wechat_qrcode_url;
+                        qrcodeUploadSection.classList.add('hidden');
+                        qrcodeUploaded.classList.remove('hidden');
+                    }
+                }
+                
+                // 获取积分汇总视图（替代 users.points/available_points）
+                const { data: summary } = await supabase
+                    .from('user_points_summary')
+                    .select('total_earned, available_points')
+                    .eq('user_id', currentUser.id)
+                    .single();
+                
+                if (summary) {
+                    userPoints.current = summary.total_earned || 0;
+                    userPoints.available = summary.available_points || 0;
+                    currentPoints.textContent = userPoints.current;
+                    availablePoints.textContent = userPoints.available;
+                    // 新增：填充导航栏积分
+                    const ptsEl = document.getElementById('user-points');
+                    const mPtsEl = document.getElementById('mobile-user-points');
+                    if (ptsEl) ptsEl.textContent = `积分：${userPoints.available}`;
+                    if (mPtsEl) mPtsEl.textContent = `积分：${userPoints.available}`;
+                }
+                
+                // 获取兑换记录
+                fetchExchangeRecords();
+            } else {
+                // 用户未登录
+                document.getElementById('records-container').classList.add('hidden');
+                document.getElementById('no-records').classList.remove('hidden');
+                document.getElementById('no-records').innerHTML = `
+                    <i class="fa fa-user-circle text-5xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500">请先登录查看兑换记录</p>
+                    <a href="login.html?redirect=points.html" class="mt-3 inline-block text-blue-600 hover:underline">
+                        前往登录
+                    </a>
+                `;
+            }
+        }
+        
+        // 退出登录
+        async function logout() {
+            const { error } = await supabase.auth.signOut();
+            if (!error) {
+                window.location.reload();
+            }
+        }
+        
+        // 页面加载完成后执行
+        window.addEventListener('DOMContentLoaded', checkAuth);
+    </script>
+</body>
+</html>
+    

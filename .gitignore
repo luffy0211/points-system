@@ -1,0 +1,10 @@
+# 忽略 Windows 系统文件
+Thumbs.db
+.DS_Store  # Mac 系统文件
+
+# 忽略缓存/日志文件
+*.log
+*.tmp
+
+# 忽略编辑器配置（如 VS Code）
+.vscode/
