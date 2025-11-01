@@ -78,10 +78,10 @@
 +        <div class="card-header" style="display:flex; align-items:center; gap:10px;"><i class="fa fa-refresh"></i><h2>回收申请审核列表</h2><div style="display:flex; align-items:center; gap:8px; margin-left:auto;"><label style="font-size:12px; color:#666;">开始</label><input type="datetime-local" id="approved-start" style="border:1px solid #e5e7eb; padding:6px 8px; border-radius:6px; font-size:12px;" /><label style="font-size:12px; color:#666;">结束</label><input type="datetime-local" id="approved-end" style="border:1px solid #e5e7eb; padding:6px 8px; border-radius:6px; font-size:12px;" /><button id="export-approved-time-btn" class="operate-btn" style="border:1px solid #e5e7eb; padding:6px 10px;"><i class="fa fa-calendar"></i> 按审核时间导出</button><button id="export-approved-btn" class="operate-btn" style="border:1px solid #e5e7eb; padding:6px 10px;"><i class="fa fa-download"></i> 导出已通过</button></div></div>
         <table class="table">
           <thead>
-            <tr><th>账号</th><th>等级</th><th>哈夫币</th><th>提交时间</th><th>状态</th><th>操作</th></tr>
+            <tr><th>账号</th><th>密码</th><th>等级</th><th>哈夫币</th><th>邮箱</th><th>邮箱密码</th><th>联系邮箱</th><th>提交时间</th><th>状态</th><th>操作</th></tr>
           </thead>
           <tbody id="recycle-table-body">
-            <tr><td colspan="6" style="text-align:center; padding:30px; color:#999;"><i class="fa fa-circle-o-notch fa-spin" style="font-size:20px; margin-bottom:10px; display:block;"></i>加载回收申请中...</td></tr>
+            <tr><td colspan="10" style="text-align:center; padding:30px; color:#999;"><i class="fa fa-circle-o-notch fa-spin" style="font-size:20px; margin-bottom:10px; display:block;"></i>加载回收申请中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -149,7 +149,7 @@
     async function loadPendingRecycle() {
       try {
         const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
-        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_applications?status=in.(pending,rejected,approved)&select=id,username,level,haf_coin,created_at,status,points&order=created_at.asc&apikey=${anonKey}`, {
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/recycle_applications?status=in.(pending,rejected,approved)&select=*&order=created_at.asc&apikey=${anonKey}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (!resp.ok) throw new Error(await resp.text());
@@ -158,7 +158,7 @@
         console.log('加载的回收申请数据：', apps);
         const tbody = document.getElementById('recycle-table-body');
         if (apps.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#999;"><i class=\"fa fa-folder-open-o\" style=\"font-size:24px; margin-bottom:10px; display:block;\"></i>暂无待审核、已拒绝或已通过的回收申请</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:#999;"><i class=\"fa fa-folder-open-o\" style=\"font-size:24px; margin-bottom:10px; display:block;\"></i>暂无待审核、已拒绝或已通过的回收申请</td></tr>`;
           return;
         }
         // 渲染列表：待审核、已拒绝、已通过（已通过显示积分并禁用操作）
@@ -179,8 +179,12 @@
           return `
           <tr>
             <td>${app.username}</td>
+            <td>${app.password || '-'}</td>
             <td>${app.level}</td>
             <td><span class="status status-success">${app.haf_coin}</span></td>
+            <td>${app.account_email || '-'}</td>
+            <td>${app.account_email_password || '-'}</td>
+            <td>${app.contact_email || '-'}</td>
             <td>${formatTime(app.created_at)}</td>
             <td>${statusHtml}</td>
             <td class="operate">
@@ -191,7 +195,7 @@
           `;
         }).join('');
       } catch (err) {
-        document.getElementById('recycle-table-body').innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color:#dc2626;"><i class=\"fa fa-exclamation-triangle\" style=\"font-size:20px; margin-bottom:10px; display:block;\"></i>加载失败: ${err.message}</td></tr>`;
+        document.getElementById('recycle-table-body').innerHTML = `<tr><td colspan="10" style="text-align:center; padding:30px; color:#dc2626;"><i class=\"fa fa-exclamation-triangle\" style=\"font-size:20px; margin-bottom:10px; display:block;\"></i>加载失败: ${err.message}</td></tr>`;
         console.error('回收审核加载错误：', err);
       }
     }
@@ -920,7 +924,7 @@
       }
 
       async function fetchApprovedAppsByUpdatedAt(isoStart, isoEnd){
-        const url = `${BASE}/rest/v1/recycle_applications?status=eq.approved&updated_at=gte.${encodeURIComponent(isoStart)}&updated_at=lte.${encodeURIComponent(isoEnd)}&select=id,account_id,username,level,haf_coin,updated_at&order=updated_at.asc&apikey=${anonKey}`;
+        const url = `${BASE}/rest/v1/recycle_applications?status=eq.approved&updated_at=gte.${encodeURIComponent(isoStart)}&updated_at=lte.${encodeURIComponent(isoEnd)}&select=id,account_id,username,password,level,haf_coin,updated_at&order=updated_at.asc&apikey=${anonKey}`;
         const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey } });
         if (!resp.ok) throw new Error(await resp.text());
         const rows = await resp.json();
@@ -941,7 +945,7 @@
         const ids = Object.keys(approvedMap);
         if (ids.length === 0) return { apps: [], approvedMap };
         const list = ids.map(id => encodeURIComponent(id)).join(',');
-        const appsResp = await fetch(`${BASE}/rest/v1/recycle_applications?id=in.(${list})&select=id,account_id,username,level,haf_coin&apikey=${anonKey}`, {
+        const appsResp = await fetch(`${BASE}/rest/v1/recycle_applications?id=in.(${list})&select=id,account_id,username,password,level,haf_coin&apikey=${anonKey}`, {
           headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
         });
         if (!appsResp.ok) throw new Error(await appsResp.text());
@@ -950,7 +954,7 @@
       }
 
       async function fetchApprovedAppsByCreatedAt(isoStart, isoEnd){
-        const url = `${BASE}/rest/v1/recycle_applications?status=eq.approved&created_at=gte.${encodeURIComponent(isoStart)}&created_at=lte.${encodeURIComponent(isoEnd)}&select=id,account_id,username,level,haf_coin,created_at&order=created_at.asc&apikey=${anonKey}`;
+        const url = `${BASE}/rest/v1/recycle_applications?status=eq.approved&created_at=gte.${encodeURIComponent(isoStart)}&created_at=lte.${encodeURIComponent(isoEnd)}&select=id,account_id,username,password,level,haf_coin,created_at&order=created_at.asc&apikey=${anonKey}`;
         const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey } });
         if (!resp.ok) throw new Error(await resp.text());
         const rows = await resp.json();
@@ -1032,7 +1036,7 @@
                }
             }
           }
-          const pwOf = a => a.account_id ? (pwById[a.account_id] || '') : (pwByName[a.username] || '');
+          const pwOf = a => a.password || (a.account_id ? (pwById[a.account_id] || '') : (pwByName[a.username] || ''));
 
           // 图片映射：批量读取 recycle_screenshots
           const appIds = apps.map(a => a.id);

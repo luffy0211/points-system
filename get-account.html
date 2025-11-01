@@ -105,7 +105,7 @@
                 <!-- 基础账号 -->
                 <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
                     <div class="bg-blue-500 text-white p-4">
-                        <h3 class="text-xl font-bold">基础账号（每个账号消耗2积分）</h3>
+                        <h3 class="text-xl font-bold">18级500W（每个账号消耗18积分）</h3>
                         <!-- 删除介绍文案 -->
                     </div>
                     <div class="p-5">
@@ -123,7 +123,7 @@
                 <!-- 高级账号 -->
                 <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
                     <div class="bg-purple-500 text-white p-4">
-                        <h3 class="text-xl font-bold">高级账号</h3>
+                        <h3 class="text-xl font-bold">30级1000W（每个账号消耗50积分）</h3>
                         <!-- 删除介绍文案 -->
                     </div>
                     <div class="p-5">
@@ -134,6 +134,38 @@
                         </div>
                         <button class="w-full bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-md transition select-account" data-type="premium">
                             获取高级账号
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 特级账号 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
+                    <div class="bg-teal-500 text-white p-4">
+                        <h3 class="text-xl font-bold">33级1000W（每个账号消耗65积分）</h3>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-gray-700">未发放数量：</span>
+                            <span id="available-super-count" class="font-mono font-bold text-teal-600">—</span>
+                        </div>
+                        <button class="w-full bg-teal-500 hover:bg-teal-600 text-white py-2 rounded-md transition select-account" data-type="super">
+                            获取特级账号
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 破产账号 -->
+                <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-105">
+                    <div class="bg-gray-600 text-white p-4">
+                        <h3 class="text-xl font-bold">30级破产账号（每个账号消耗35积分）</h3>
+                    </div>
+                    <div class="p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-gray-700">未发放数量：</span>
+                            <span id="available-bankrupt-count" class="font-mono font-bold text-gray-600">—</span>
+                        </div>
+                        <button class="w-full bg-gray-600 hover:bg-gray-700 text-white py-2 rounded-md transition select-account" data-type="bankrupt">
+                            获取破产账号
                         </button>
                     </div>
                 </div>
@@ -171,7 +203,7 @@
                 <ul class="space-y-2 text-gray-700 list-disc pl-5">
                     <li>取号前务必阅读并遵守号要求</li>
                     <li>严格按照要求进行，如果不符合要求，网站不回收，后果自负</li>
-                    <li>高级账号尚未开放，后续期待</li>
+                    <li>账号类型：基础、<span class="text-purple-600">高级</span>、<span class="text-teal-600">特级</span>、<span class="text-gray-600">破产</span></li>
                     <li>基础账号每个账号获取消耗2积分</li>
                     <li>使用完毕请及时回收账号，以便他人使用</li>
                 </ul>
@@ -346,29 +378,27 @@
     async function loadAvailableCounts() {
         const basicEl = document.getElementById('available-basic-count');
         const premiumEl = document.getElementById('available-premium-count');
+        const superEl = document.getElementById('available-super-count');
+        const bankruptEl = document.getElementById('available-bankrupt-count');
         if (!basicEl || !premiumEl) return;
-        // 基础
-        try {
-            const { count: basicCount, error: bErr } = await supabaseClient
-                .from('steam_accounts')
-                .select('id', { count: 'exact', head: true })
-                .eq('account_type', 'basic')
-                .is('used_by', null);
-            basicEl.textContent = (!bErr && basicCount !== null) ? basicCount : '0';
-        } catch (_) {
-            basicEl.textContent = '0';
+
+        async function fetchCount(type) {
+            try {
+                const { count, error } = await supabaseClient
+                    .from('steam_accounts')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('account_type', type)
+                    .is('used_by', null);
+                return (!error && count !== null) ? count : 0;
+            } catch (_) {
+                return 0;
+            }
         }
-        // 高级
-        try {
-            const { count: premiumCount, error: pErr } = await supabaseClient
-                .from('steam_accounts')
-                .select('id', { count: 'exact', head: true })
-                .eq('account_type', 'premium')
-                .is('used_by', null);
-            premiumEl.textContent = (!pErr && premiumCount !== null) ? premiumCount : '0';
-        } catch (_) {
-            premiumEl.textContent = '0';
-        }
+
+        basicEl.textContent = await fetchCount('basic');
+        premiumEl.textContent = await fetchCount('premium');
+        if (superEl) superEl.textContent = await fetchCount('super');
+        if (bankruptEl) bankruptEl.textContent = await fetchCount('bankrupt');
     }
 
     // 初始化移动端菜单
@@ -588,7 +618,7 @@
     
             // 1. 调用存储过程（原子化获取账号，避免并发重复）
             console.log("调用存储过程的参数：", {
-              p_account_type: accountType, // 应为'basic'或'premium'
+              p_account_type: accountType,
               p_user_id: currentUser.id // 应为UUID格式（如："a1b2c3d4-...")
             });
     
@@ -638,7 +668,7 @@
     
             // 4. 显示账号详情（确保模态框数据正确）
             showAccountModal({
-                type: accountType === 'basic' ? '基础账号' : '高级账号',
+                type: ({basic:'基础账号',premium:'高级账号',super:'特级账号',bankrupt:'破产账号'})[accountType] || '账号',
                 username: steam_username,
                 password: password,
                 time: new Date().toLocaleString()
@@ -663,7 +693,7 @@
             buttons.forEach(btn => {
                 btn.disabled = false;
                 const type = btn.getAttribute('data-type');
-                btn.innerHTML = `获取${type === 'basic' ? '基础' : '高级'}账号`;
+                btn.innerHTML = `获取${({basic:'基础',premium:'高级',super:'特级',bankrupt:'破产'})[type] || ''}账号`;
             });
         }
     }
@@ -697,7 +727,7 @@
                     <div class="history-item p-3 rounded-lg transition-colors">
                         <div class="flex justify-between items-center">
                             <div>
-                                <p class="font-medium">${item.account_type === 'basic' ? '基础账号' : '高级账号'}</p>
+                                <p class="font-medium">${({basic:'基础账号',premium:'高级账号',super:'特级账号',bankrupt:'破产账号'})[item.account_type] || '账号'}</p>
                                 <p class="text-sm text-gray-500">账号：${item.username} | 获取时间: ${new Date(item.get_time).toLocaleString()}</p>
                             </div>
                             <button class="view-details text-blue-600 hover:text-blue-800 transition" 
@@ -751,7 +781,7 @@
                 return;
             }
             showAccountModal({
-                type: history.account_type === 'basic' ? '基础账号' : '高级账号',
+                type: ({basic:'基础账号',premium:'高级账号',super:'特级账号',bankrupt:'破产账号'})[history.account_type] || '账号',
                 username: account.steam_username,
                 password: pwd,
                 time: new Date(history.get_time).toLocaleString()

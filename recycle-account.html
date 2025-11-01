@@ -169,9 +169,8 @@
                                     placeholder="请输入密码" required>
                             </div>
                         </div>
-                    </div>
-                    
-                    <div>
+                                            
+                    <div class="md:col-span-2">
                         <label class="block text-gray-700 font-medium mb-3">账号等级 <span class="text-red-500">*</span></label>
                         <div class="flex flex-wrap gap-4">
                             <label class="level-option cursor-pointer">
@@ -194,6 +193,45 @@
                             </label>
                         </div>
                     </div>
+
+                
+                        <!-- 新增：邮箱、邮箱密码、邮箱地址 -->
+                        <div>
+                            <label for="account-email" class="block text-gray-700 font-medium mb-2">邮箱 <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                    <i class="fa fa-envelope"></i>
+                                </span>
+                                <input type="email" id="account-email" name="account-email"
+                                    class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                    placeholder="请输入邮箱" required>
+                            </div>
+                        </div>
+                
+                        <div>
+                            <label for="account-email-password" class="block text-gray-700 font-medium mb-2">邮箱密码 <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                    <i class="fa fa-lock"></i>
+                                </span>
+                                <input type="text" id="account-email-password" name="account-email-password"
+                                    class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                    placeholder="请输入邮箱密码" required>
+                            </div>
+                        </div>
+                
+                        <div class="md:col-span-2">
+                            <label for="contact-email" class="block text-gray-700 font-medium mb-2">邮箱地址（联系用） <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">
+                                    <i class="fa fa-envelope"></i>
+                                </span>
+                                <input type="email" id="contact-email" name="contact-email"
+                                    class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                                    placeholder="请输入联系邮箱" required>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div>
                         <label for="haf-coin" class="block text-gray-700 font-medium mb-2">哈夫币数量（单位W） <span class="text-red-500">*</span></label>
@@ -211,7 +249,7 @@
                     </div>
                     
                     <!-- 上传区域 -->
-                    <div>
+                    <div class="md:col-span-2">
                         <label class="block text-gray-700 font-medium mb-2">账号截图 <span class="text-red-500">*</span></label>
                         <p class="text-gray-500 text-sm mb-3">请上传5-6张账号相关截图（所有截图必须漏出uid，否则无效）</p>
                         
@@ -539,43 +577,24 @@
         // 9. 核心：验证账号归属（是否为当前用户通过本系统获取）
         async function verifyAccountOwnership(username, password) {
             try {
-                const { data: account, error: accountError } = await supabaseClient
-                    .from('steam_accounts')
-                    .select('id, steam_password, used_by')
-                    .eq('steam_username', username)
-                    .single();
-
-                if (accountError) {
-                    return { valid: false, message: '该账号不是通过本网站获取的，无法回收' };
+                // 新逻辑：允许用户上传非平台获取的账号
+                if (!username || !password) {
+                    return { valid: false, message: '请输入完整的账号和密码' };
                 }
-
-                if (account.used_by !== currentUser.id) {
-                    return { valid: false, message: '该账号不属于您，无法回收' };
-                }
-
-                const storedPassword = account.steam_password;
-                if (!storedPassword) {
-                    return { valid: false, message: '账号密码缺失，请联系管理员' };
-                }
-
-                if (storedPassword !== password) {
-                    return { valid: false, message: '账号密码错误，请重新输入' };
-                }
-
-                const { data: recycleRecord } = await supabaseClient
+                // 防重复：检查该用户是否已提交过同一用户名且非已拒绝的申请
+                const { data: existing } = await supabaseClient
                     .from('recycle_applications')
                     .select('id,status,created_at')
-                    .eq('account_id', account.id)
+                    .eq('user_id', currentUser.id)
+                    .eq('username', username)
                     .order('created_at', { ascending: false })
                     .limit(1)
                     .maybeSingle();
-
-                if (recycleRecord && recycleRecord.status !== 'rejected') {
+                if (existing && existing.status !== 'rejected') {
                     return { valid: false, message: '该账号已有申请处理中或已通过，暂不可重复提交' };
                 }
-
-                return { valid: true, accountId: account.id };
-
+                // 不再强制要求存在于 steam_accounts 表
+                return { valid: true, accountId: null };
             } catch (error) {
                 console.error('账号验证失败:', error);
                 return { valid: false, message: '验证失败，请稍后再试' };
@@ -610,6 +629,29 @@
                 showToast('请选择账号等级', 'error');
                 isValid = false;
             }
+
+            // 新增：必填校验 - 邮箱、邮箱密码、联系邮箱
+            const accountEmailInput = document.getElementById('account-email');
+            const emailPasswordInput = document.getElementById('account-email-password');
+            const contactEmailInput = document.getElementById('contact-email');
+            if (!accountEmailInput.value.trim()) {
+                showToast('请填写邮箱', 'error');
+                isValid = false;
+            } else if (!accountEmailInput.checkValidity()) {
+                showToast('邮箱格式不正确', 'error');
+                isValid = false;
+            }
+            if (!emailPasswordInput.value.trim()) {
+                showToast('请填写邮箱密码', 'error');
+                isValid = false;
+            }
+            if (!contactEmailInput.value.trim()) {
+                showToast('请填写联系邮箱', 'error');
+                isValid = false;
+            } else if (!contactEmailInput.checkValidity()) {
+                showToast('联系邮箱格式不正确', 'error');
+                isValid = false;
+            }
             
             if (!isValid) return;
             
@@ -626,26 +668,34 @@
                 const level = selectedLevel.value;
                 const hafCoin = parseInt(hafCoinInput.value);
                 const remark = document.getElementById('recycle-remark').value.trim();
+                // 新增：读取邮箱相关字段（可选）
+                const accountEmail = document.getElementById('account-email')?.value.trim() || '';
+                const accountEmailPassword = document.getElementById('account-email-password')?.value.trim() || '';
+                const contactEmail = document.getElementById('contact-email')?.value.trim() || '';
                 
-                // 验证账号归属
+                // 验证账号（取消 steam_accounts 强校验，仅做基本与重复校验）
                 const ownershipResult = await verifyAccountOwnership(username, password);
                 if (!ownershipResult.valid) {
                     throw new Error(ownershipResult.message);
                 }
-                const accountId = ownershipResult.accountId;
+                const accountId = ownershipResult.accountId; // 可能为 null
                 
-                // 关键修改：supabase → supabaseClient
+                // 关键修改：插入时允许 account_id 为空，保存用户提供的账号与密码
                 const { data: application, error: appError } = await supabaseClient
                     .from('recycle_applications')
-                    .insert([{
+                    .insert([{ 
                         user_id: currentUser.id,
-                        account_id: accountId,
+                        account_id: accountId, // 为空表示用户自有账号
                         username: username,
                         password: password, // 实际项目建议加密存储
                         level: level,
                         haf_coin: hafCoin,
                         remark: remark,
-                        status: 'pending'
+                        status: 'pending',
+                        // 新增：可选邮箱字段（表扩展后生效）
+                        account_email: accountEmail || null,
+                        account_email_password: accountEmailPassword || null,
+                        contact_email: contactEmail || null
                     }])
                     .select()
                     .single();
@@ -657,7 +707,7 @@
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     const fileExt = file.name.split('.').pop();
-                    const fileName = `recycle_${applicationId}_${accountId}_${i}_${Date.now()}.${fileExt}`;
+                    const fileName = `recycle_${applicationId}_${accountId || 'custom'}_${i}_${Date.now()}.${fileExt}`;
                     const objectKey = `${currentUser.id}/${fileName}`; // 上传到用户UID顶级目录
                     
                     // 关键修改：使用 objectKey 上传到用户目录
