@@ -23,6 +23,7 @@
                 <a href="get-account.html" class="hover:text-blue-200 transition">获取账号</a>
                 <a href="recycle-account.html" class="hover:text-blue-200 transition">账号回收</a>
                 <a href="points.html" class="hover:text-blue-200 transition">积分兑换</a>
+                <a href="PointsTop-up.html" class="hover:text-blue-200 transition">积分充值</a>
                 <div id="auth-links">
                     <a href="login.html" class="hover:text-blue-200 transition">登录</a>
                     <span class="mx-2">|</span>
@@ -451,14 +452,7 @@
                     successEl.textContent = '注册成功，可直接登录';
                     successEl.classList.remove('hidden');
 
-                    // 3.1 注册成功且已登录：发放初始积分 +4（事务记录）
-                    try {
-                        await supabase
-                            .from('points_transactions')
-                            .insert([{ user_id: data.user.id, type: 'earn', amount: 4, note: '注册奖励：首次注册发放4积分' }]);
-                    } catch (awardErr) {
-                        console.warn('注册奖励积分发放失败（稍后首登会重试）:', awardErr?.message || awardErr);
-                    }
+                    // 已取消注册送积分机制
                 } else {
                     successEl.innerHTML = `
                         <div>注册成功，已向 ${email} 发送验证邮件，请打开邮箱完成验证后再登录。</div>

@@ -55,6 +55,7 @@
       <button class="tab-btn" data-tab="account-audit">账号批量插入</button>
       <button class="tab-btn active" data-tab="recycle-audit">回收申请审核</button>
       <button class="tab-btn" data-tab="points-audit">积分兑换审核</button>
+      <button class="tab-btn" data-tab="topup-audit">充值申请审核</button>
     </div>
     <div id="add-alert" class="alert" style="margin:12px 0; display:none;"></div>
 
@@ -96,6 +97,33 @@
           </thead>
           <tbody id="points-table-body">
             <tr><td colspan="6" style="text-align:center; padding:30px; color:#999;"><i class="fa fa-folder-open-o" style="font-size:24px; margin-bottom:10px; display:block;"></i>暂未实现积分审核展示</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <div class="tab-panel" id="topup-audit">
+      <div class="card">
+        <div class="card-header" style="display:flex; align-items:center; gap:10px;">
+            <i class="fa fa-plus-circle"></i>
+            <h2>充值申请审核列表</h2>
+            <div style="display:flex; align-items:center; gap:15px; margin-left:auto;">
+              <div style="position:relative;">
+                <input type="text" id="search-user-id-input" placeholder="输入用户名或用户ID" style="border:1px solid #e5e7eb; padding:6px 8px; border-radius:6px; font-size:14px; width:200px;">
+                <small style="color:#999; font-size:11px; position:absolute; top:100%; left:0; margin-top:2px;">输入用户名自动查找用户ID，或直接输入用户ID</small>
+              </div>
+              <button id="search-user-btn" class="operate-btn operate-pass" style="border:1px solid #e5e7eb; padding:6px 10px;"><i class="fa fa-plus"></i> 添加积分</button>
+              <button id="cancel-search-user-btn" class="operate-btn operate-reject" style="border:1px solid #e5e7eb; padding:6px 10px;"><i class="fa fa-times"></i> 取消</button>
+              
+
+            </div>
+          </div>
+        <table class="table">
+          <thead>
+            <tr><th>用户ID</th><th>积分数量</th><th>提交时间</th><th>支付截图</th><th>备注</th><th>状态</th><th>操作</th></tr>
+          </thead>
+          <tbody id="topup-table-body">
+            <tr><td colspan="7" style="text-align:center; padding:30px; color:#999;"><i class="fa fa-circle-o-notch fa-spin" style="font-size:20px; margin-bottom:10px; display:block;"></i>加载充值申请中...</td></tr>
           </tbody>
         </table>
       </div>
@@ -481,6 +509,343 @@
       }
     };
 
+    // 加载充值申请函数
+    async function loadTopupApplications() {
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      try {
+        const tbody = document.getElementById('topup-table-body');
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#999;"><i class="fa fa-circle-o-notch fa-spin" style="font-size:20px; margin-bottom:10px; display:block;"></i>加载充值申请中...</td></tr>`;
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/topup_applications?select=id,user_id,points_awarded,screenshot_url,note,status,created_at,updated_at&order=created_at.asc&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        const applications = await resp.json();
+        
+        if (applications.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:#999;"><i class="fa fa-folder-open-o" style="font-size:24px; margin-bottom:10px; display:block;"></i>暂无充值申请</td></tr>`;
+          return;
+        }
+        
+        // 渲染充值申请列表
+        tbody.innerHTML = applications.map(app => {
+          const statusHtml = app.status === 'approved'
+            ? '<span class="status status-success">已批准</span>'
+            : app.status === 'rejected'
+              ? '<span class="status status-error">已拒绝</span>'
+              : '<span class="status status-warning">待审核</span>';
+              
+          const operateHtml = app.status === 'pending'
+            ? `<button class="operate-btn operate-pass" onclick="approveTopup('${app.id}')"><i class="fa fa-check"></i>通过</button>
+               <button class="operate-btn operate-reject" onclick="rejectTopup('${app.id}')"><i class="fa fa-times"></i>拒绝</button>`
+            : '<span style="color:#999;">已处理</span>';
+            
+          const screenshotHtml = app.screenshot_url
+            ? `<button class="operate-btn" onclick="viewScreenshot('${encodeURIComponent(app.screenshot_url)}')"><i class="fa fa-image"></i>查看</button>`
+            : '<span style="color:#999;">无截图</span>';
+            
+          return `
+            <tr>
+              <td>${app.user_id}</td>
+              <td>${app.points_awarded || '-'}</td>
+              <td>${formatTime(app.created_at)}</td>
+              <td class="operate">${screenshotHtml}</td>
+              <td>${app.note || '-'}</td>
+              <td>${statusHtml}</td>
+              <td class="operate">${operateHtml}</td>
+            </tr>
+          `;
+        }).join('');
+      } catch (err) {
+        showAlert('add-alert', `读取充值申请失败: ${err.message}`, 'error');
+        console.error('读取充值申请错误：', err);
+      }
+    }
+    
+    // 查看截图函数
+    window.viewScreenshot = function(encodedUrl) {
+      try {
+        const url = decodeURIComponent(encodedUrl || '');
+        if (!url) { alert('未找到截图地址'); return; }
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.65);z-index:9999;';
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:8px;max-width:90vw;max-height:90vh;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.2);';
+        const title = document.createElement('div');
+        title.textContent = '支付截图预览';
+        title.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:12px;';
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = '支付截图';
+        img.style.cssText = 'max-width:80vw;max-height:70vh;display:block;margin:0 auto;';
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '关闭';
+        closeBtn.className = 'operate-btn';
+        closeBtn.style.cssText = 'margin-top:12px;';
+        closeBtn.onclick = () => { if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); };
+        overlay.onclick = (e) => { if (e.target === overlay) { if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay); } };
+        modal.appendChild(title);
+        modal.appendChild(img);
+        modal.appendChild(closeBtn);
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+      } catch (err) {
+        alert('预览截图失败：' + err.message);
+      }
+    };
+    
+    // 批准充值申请
+    window.approveTopup = async function(appId) {
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      
+      try {
+        const encodedId = encodeURIComponent(appId);
+        
+        // 1. 先获取充值申请的详细信息，包括user_id
+        const getResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/topup_applications?id=eq.${encodedId}&select=user_id,points_awarded&apikey=${anonKey}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!getResp.ok) throw new Error(await getResp.text());
+        const applications = await getResp.json();
+        
+        if (!Array.isArray(applications) || applications.length === 0) {
+          throw new Error('充值申请不存在');
+        }
+        
+        const app = applications[0];
+        const userId = app.user_id;
+        const suggestedPoints = app.points_awarded || 0;
+        
+        // 2. 弹出输入框让商家输入积分数量，默认显示申请中的积分数量
+        const pointsInput = prompt('请输入要充值的积分数量:', suggestedPoints);
+        
+        // 如果用户点击取消，则不进行后续操作
+        if (pointsInput === null) return;
+        
+        // 3. 验证积分数量
+        const pointsToAdd = parseInt(pointsInput, 10);
+        
+        if (isNaN(pointsToAdd) || pointsToAdd <= 0) {
+          alert('积分数量必须是大于0的数字');
+          return;
+        }
+        
+        if (!confirm(`确定批准该充值申请并为用户添加 ${pointsToAdd} 积分？`)) return;
+        
+        // 4. 更新充值申请状态为已批准，并更新实际充值的积分数量
+        const updateResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/topup_applications?id=eq.${encodedId}&apikey=${anonKey}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ 
+            status: 'approved',
+            points_awarded: pointsToAdd // 更新为实际充值的积分数量
+          })
+        });
+        
+        if (!updateResp.ok) throw new Error(await updateResp.text());
+        
+        // 5. 向points_transactions表插入记录，给用户增加积分
+        const txnResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/points_transactions?apikey=${anonKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            type: 'earn', // earn类型表示增加积分
+            amount: pointsToAdd,
+            note: `充值申请 ${appId} 批准，增加积分`,
+            created_at: new Date().toISOString()
+          })
+        });
+        
+        if (!txnResp.ok) throw new Error(`积分添加失败: ${await txnResp.text()}`);
+        
+        showAlert('add-alert', `充值申请已批准，成功为用户添加 ${pointsToAdd} 积分`, 'success');
+        loadTopupApplications();
+      } catch (err) {
+        showAlert('add-alert', `批准充值失败: ${err.message}`, 'error');
+        console.error('批准充值错误：', err);
+      }
+    };
+    
+    // 拒绝充值申请
+    window.rejectTopup = async function(appId) {
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      if (!confirm('确定拒绝该充值申请？')) return;
+      
+      try {
+        const encodedId = encodeURIComponent(appId);
+        const resp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/topup_applications?id=eq.${encodedId}&apikey=${anonKey}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: 'rejected' })
+        });
+        
+        if (!resp.ok) throw new Error(await resp.text());
+        showAlert('add-alert', '充值申请已拒绝', 'success');
+        loadTopupApplications();
+      } catch (err) {
+        showAlert('add-alert', `拒绝充值失败: ${err.message}`, 'error');
+        console.error('拒绝充值错误：', err);
+      }
+    };
+    
+    // 初始化取消添加积分功能
+    document.getElementById('cancel-search-user-btn')?.addEventListener('click', function() {
+      document.getElementById('search-user-id-input').value = '';
+      console.log('已取消添加积分操作');
+    });
+    
+    // 通过用户名添加积分功能
+    document.getElementById('search-user-btn').addEventListener('click', async () => {
+      const ok = await checkAuth();
+      if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
+      
+      const username = document.getElementById('search-user-id-input').value.trim();
+      if (!username) {
+        alert('请输入用户名');
+        return;
+      }
+      
+      try {
+        // 步骤1: 支持直接输入用户ID或通过用户名查找
+        const inputValue = username.trim();
+        console.log(`处理输入值: ${inputValue}`);
+        let userId = null;
+        let usernameForDisplay = inputValue;
+        
+        try {
+          // 检查输入是否已经是有效的UUID格式（用户ID）
+          if (/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(inputValue)) {
+            console.log('输入值看起来是用户ID格式，直接使用');
+            userId = inputValue;
+            usernameForDisplay = `用户ID: ${inputValue.substring(0, 8)}...`;
+          } else {
+            // 如果不是UUID，则尝试通过users表查找用户
+            console.log('尝试通过用户名查找用户:', inputValue);
+            
+            // 直接查询特定用户名的用户，避免RLS策略限制
+            const queryUrl = `https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/users?username=eq.${encodeURIComponent(inputValue)}&select=id,username`;
+            console.log('查询URL:', queryUrl);
+            
+            const userResp = await fetch(queryUrl, { 
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Accept': 'application/json',
+                'apikey': anonKey
+              }
+            });
+            
+            console.log('查询响应状态:', userResp.status);
+            const userData = await userResp.json();
+            console.log('查询结果:', JSON.stringify(userData, null, 2));
+            
+            if (Array.isArray(userData) && userData.length > 0) {
+              // 找到精确匹配的用户
+              const foundUser = userData[0];
+              userId = foundUser.id;
+              usernameForDisplay = `用户名: ${foundUser.username}`;
+              console.log(`找到用户 ${foundUser.username}，ID为 ${userId}`);
+              // 显示匹配成功提示
+              alert(`成功匹配用户: ${foundUser.username}`);
+            } else {
+              // 尝试不区分大小写查询
+              console.log('尝试不区分大小写查询');
+              const caseInsensitiveQueryUrl = `https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/users?select=id,username`;
+              const allUsersResp = await fetch(caseInsensitiveQueryUrl, { 
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Accept': 'application/json',
+                  'apikey': anonKey
+                }
+              });
+              
+              const allUsersData = await allUsersResp.json();
+              console.log('不区分大小写查询结果:', JSON.stringify(allUsersData, null, 2));
+              
+              // 在返回的结果中尝试不区分大小写匹配
+              let foundUser = null;
+              if (Array.isArray(allUsersData) && allUsersData.length > 0) {
+                foundUser = allUsersData.find(u => 
+                  u.username && u.username.toLowerCase() === inputValue.toLowerCase()
+                );
+              }
+              
+              if (foundUser && foundUser.id) {
+                userId = foundUser.id;
+                usernameForDisplay = `用户名: ${foundUser.username}`;
+                console.log(`找到用户 ${foundUser.username}，ID为 ${userId}`);
+                alert(`成功匹配用户: ${foundUser.username}`);
+              } else {
+                // 显示提示信息
+                alert(`未找到用户名为 "${inputValue}" 的用户\n\n请检查输入是否正确，或直接输入用户ID。`);
+                return;
+              }
+            }
+          }
+        } catch (userSearchErr) {
+          console.error('搜索用户时出错:', userSearchErr);
+          alert(`搜索用户失败: ${userSearchErr.message}`);
+          return;
+        }
+        
+        // 2. 弹出输入框让商家输入积分数量
+        const pointsInput = prompt(`请输入要为 ${usernameForDisplay} 添加的积分数量:`, '100');
+        
+        // 如果用户点击取消，则不进行后续操作
+        if (pointsInput === null) return;
+        
+        // 3. 验证积分数量
+        const pointsToAdd = parseInt(pointsInput, 10);
+        
+        if (isNaN(pointsToAdd) || pointsToAdd <= 0) {
+          alert('积分数量必须是大于0的数字');
+          return;
+        }
+        
+        if (!confirm(`确定为 ${usernameForDisplay} 添加 ${pointsToAdd} 积分？`)) return;
+        
+        // 4. 向points_transactions表插入记录，给用户增加积分
+        const txnResp = await fetch(`https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/points_transactions?apikey=${anonKey}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            user_id: userId,
+            type: 'earn', // earn类型表示增加积分
+            amount: pointsToAdd,
+            note: `商家通过${userId === inputValue ? '用户ID' : '用户名'} ${inputValue} 手动添加积分`,
+            created_at: new Date().toISOString()
+          })
+        });
+        
+        if (!txnResp.ok) throw new Error(`积分添加失败: ${await txnResp.text()}`);
+        
+        showAlert('add-alert', `成功为 ${usernameForDisplay} 添加 ${pointsToAdd} 积分`, 'success');
+        
+        // 清空搜索框
+        document.getElementById('search-user-id-input').value = '';
+      } catch (err) {
+        showAlert('add-alert', `操作失败: ${err.message}`, 'error');
+        console.error('查找用户添加积分错误：', err);
+      }
+    });
+    
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -489,8 +854,11 @@
         document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
         document.getElementById(tabId).classList.add('active');
         if (tabId === 'recycle-audit') loadPendingRecycle();
+        if (tabId === 'topup-audit') loadTopupApplications();
         // 新增：切换到积分兑换审核时加载列表
         if (tabId === 'points-audit') loadPointsRedemptions();
+        // 新增：切换到充值申请审核时加载列表
+        if (tabId === 'topup-audit') loadTopupApplications();
       });
     });
 
@@ -746,6 +1114,11 @@
         await loadPendingRecycle();
         // 新增：页面加载后预取积分兑换列表
         await loadPointsRedemptions();
+        // 如果当前选中的是充值申请标签页，则加载充值申请列表
+        const activeTab = document.querySelector('.tab-btn.active');
+        if (activeTab && activeTab.getAttribute('data-tab') === 'topup-audit') {
+          await loadTopupApplications();
+        }
       }
     }
     
@@ -1084,123 +1457,9 @@
           showAlert('add-alert', `导出失败：${e.message}`, 'error');
         }
       });
+
+    
     })();
   </script>
 </body>
 
-<!-- // 绑定导出按钮：导出已通过的账号、密码、等级、哈夫币、图片
-(function(){
-  const btn = document.getElementById('export-approved-btn');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    const ok = await checkAuth();
-    if (!ok) { alert('未登录或 token 刷新失败，请重新登录'); return; }
-    try {
-      const BASE = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
-      const publicBase = `${BASE}/storage/v1/object/public/screenshots/`;
-      const resp = await fetch(`${BASE}/rest/v1/recycle_applications?status=eq.approved&select=id,account_id,username,level,haf_coin&order=created_at.asc&apikey=${anonKey}`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-      const apps = await resp.json();
-      if (!Array.isArray(apps) || apps.length === 0) { showAlert('add-alert', '没有已通过的回收申请', 'warning'); return; }
-
-      // 密码映射：先按 account_id 查，再按用户名回退
-      const accountIds = [...new Set(apps.map(a => a.account_id).filter(Boolean))];
-      let pwById = {};
-      if (accountIds.length > 0) {
-        const inStr = accountIds.map(id => encodeURIComponent(id)).join(',');
-        const pwResp = await fetch(`${BASE}/rest/v1/steam_accounts?id=in.(${inStr})&select=id,steam_username,steam_password&apikey=${anonKey}`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
-        });
-        if (pwResp.ok) {
-          (await pwResp.json()).forEach(r => {
-            const dec = r.steam_password || '';
-            if (r.id) pwById[r.id] = dec;
-            if (r.steam_username) pwByName[r.steam_username] = dec;
-          });
-        }
-      }
-      const usernames = [...new Set(apps.map(a => a.username).filter(Boolean))];
-      let pwByName = {};
-      const needNameFallback = apps.some(a => !a.account_id || !pwById[a.account_id]);
-      if (needNameFallback && usernames.length > 0) {
-        const list = usernames.map(u => encodeURIComponent(u)).join(',');
-        const nameResp = await fetch(`${BASE}/rest/v1/steam_accounts?steam_username=in.(${list})&select=steam_username,steam_password&apikey=${anonKey}`, {
-           headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
-         });
-         if (nameResp.ok) {
-           (await nameResp.json()).forEach(r => {
-             const dec = r.steam_password || '';
-             pwByName[r.steam_username] = dec;
-           });
-         }
-      }
-      // 额外回退：一次性 OR 查询补全缺失密码
-      const missing = apps.filter(a => !(a.account_id && pwById[a.account_id]) && !(a.username && pwByName[a.username]));
-      if (missing.length > 0) {
-        const missingIds = [...new Set(missing.map(a => a.account_id).filter(Boolean))];
-        const missingNames = [...new Set(missing.map(a => a.username).filter(Boolean))];
-        if (missingIds.length > 0 || missingNames.length > 0) {
-          const orParts = [];
-          if (missingIds.length > 0) orParts.push(`id.in.(${missingIds.map(id => encodeURIComponent(id)).join(',')})`);
-          if (missingNames.length > 0) orParts.push(`steam_username.in.(${missingNames.map(n => `%22${encodeURIComponent(n)}%22`).join(',')})`);
-          const orQuery = `${BASE}/rest/v1/steam_accounts?or=(${orParts.join(',')})&select=id,steam_username,steam_password&apikey=${anonKey}`;
-          const orResp = await fetch(orQuery, { headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey } });
-          if (orResp.ok) {
-            const rows = await orResp.json();
-            rows.forEach(r => {
-              const dec = r.steam_password || '';
-              if (r.id) pwById[r.id] = dec;
-              if (r.steam_username) pwByName[r.steam_username] = dec;
-            });
-          }
-        }
-      }
-
-      // 图片映射：批量读取 recycle_screenshots
-      const appIds = apps.map(a => a.id);
-      let imgMap = {};
-      if (appIds.length > 0) {
-        const inStr = appIds.map(id => encodeURIComponent(id)).join(',');
-        const imgResp = await fetch(`${BASE}/rest/v1/recycle_screenshots?application_id=in.(${inStr})&select=application_id,url,file_name&order=application_id.asc,file_name.asc&apikey=${anonKey}`, {
-          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
-        });
-        if (imgResp.ok) {
-          const rows = await imgResp.json();
-          rows.forEach(it => {
-            const key = it.application_id;
-            const finalUrl = it.url || (it.file_name ? publicBase + encodeURIComponent(it.file_name).replace(/%2F/g,'/') : '');
-            if (!imgMap[key]) imgMap[key] = [];
-            if (finalUrl) imgMap[key].push(finalUrl);
-          });
-        }
-      }
-
-      // 将图片拆成多列
-      const maxImages = Math.max(0, ...apps.map(a => (imgMap[a.id] || []).length));
-      const headers = ['username','password','level','haf_coin'].concat(Array.from({ length: maxImages }, (_, i) => `image_${i+1}`));
-      const lines = [headers.join(',')];
-      apps.forEach(a => {
-        const pw = a.account_id ? (pwById[a.account_id] || '') : (pwByName[a.username] || '');
-        const imgs = imgMap[a.id] || [];
-        const paddedImgs = Array.from({ length: maxImages }, (_, i) => imgs[i] || '');
-        const vals = [a.username || '', pw || '', a.level || '', (a.haf_coin ?? '')].concat(paddedImgs);
-        lines.push(vals.map(v => String(v).replace(/"/g,'""')).map(v => `"${v}"`).join(','));
-      });
-      const csv = lines.join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      const ts = new Date();
-      const name = `approved_accounts_${ts.getFullYear()}${String(ts.getMonth()+1).padStart(2,'0')}${String(ts.getDate()).padStart(2,'0')}_${String(ts.getHours()).padStart(2,'0')}${String(ts.getMinutes()).padStart(2,'0')}.csv`;
-      a.href = url; a.download = name;
-      document.body.appendChild(a); a.click();
-      document.body.removeChild(a); URL.revokeObjectURL(url);
-      showAlert('add-alert', `已导出 ${apps.length} 条记录`, 'success');
-    } catch (e) {
-      console.error('导出失败：', e);
-      showAlert('add-alert', `导出失败：${e.message}`, 'error');
-    }
-  });
-})(); -->
