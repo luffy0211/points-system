@@ -621,7 +621,8 @@
                 showToast('账号密码缺失，请联系管理员', 'error');
                 return;
             }
-            // 3. 记录获取历史（确保字段正确）
+            // 3. 记录获取历史（确保字段正确，使用原始账号类型值）
+            // 数据库约束已更新，支持所有账号类型
             const { error: historyError } = await supabaseClient
                 .from('account_history')
                 .insert([
