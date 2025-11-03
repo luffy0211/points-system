@@ -145,7 +145,7 @@
             <!-- 用户信息提示栏 -->
             <div class="bg-blue-50 border border-blue-100 rounded-md p-4 mb-8">
                 <p class="text-gray-700">账号：<span id="user-account" class="font-medium">未登录</span></p>
-                <p class="text-gray-700">可兑换积分：<span id="available-points" class="font-medium text-green-600">0</span>（兑换后需保留 ≥ 4分）</p>
+                <p class="text-gray-700">可兑换积分：<span id="available-points" class="font-medium text-green-600">0</span></p>
                 <p class="text-gray-700">冷却积分：<span id="cooling-points" class="font-medium text-yellow-600">0</span>（<span id="cooldown-remaining" class="font-medium text-gray-600">--</span>后解锁）</p>
                 <!-- 保留一个隐藏的占位元素以避免旧代码引用报错（不显示给用户） -->
                 <span id="current-points" class="hidden"></span>
@@ -219,7 +219,7 @@
             <!-- 积分兑换申请（替代固定礼品） -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-12" id="redeem-form-section">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6">积分兑换申请</h2>
-                <p class="text-gray-600 mb-4">请输入要兑换的积分数量，审核通过后将打款至您绑定的微信收款码。<span class="text-gray-500">（兑换后需保留 ≥ 4分）</span></p>
+                <p class="text-gray-600 mb-4">请输入要兑换的积分数量，审核通过后将打款至您绑定的微信收款码。</p>
                 <div class="flex items-center gap-4">
                     <input type="number" id="redeem-amount" min="1" placeholder="输入积分数量" class="flex-1 border rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300" />
                     <button id="submit-redeem" class="btn-primary text-white py-2 px-6 rounded-md">提交兑换申请</button>
@@ -564,11 +564,7 @@
                     showModalError(msg);
                     return;
                 }
-                // 可选：前端校验兑换后保留≥4分
-                if ((userPoints.available - amount) < 4) {
-                    showModalError('兑换后需保留 ≥ 4分，请调整兑换数量');
-                    return;
-                }
+                // 移除了兑换后保留≥4分的限制
                 try {
                     // 创建积分兑换申请，等待商家审核，并立即扣除相应积分
                     const { data: inserted, error: exError } = await supabase
