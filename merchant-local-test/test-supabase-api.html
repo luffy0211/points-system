@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase API 测试页面</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .header {
+      background-color: #165DFF;
+      color: white;
+      padding: 20px 0;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .header h1 {
+      margin: 0;
+      text-align: center;
+      font-weight: 500;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid #dee2e6;
+      padding-bottom: 10px;
+    }
+    
+    .tab-btn {
+      padding: 10px 20px;
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 5px 5px 0 0;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 16px;
+    }
+    
+    .tab-btn:hover {
+      background-color: #e9ecef;
+    }
+    
+    .tab-btn.active {
+      background-color: #165DFF;
+      color: white;
+      border-color: #165DFF;
+    }
+    
+    .tab-content {
+      display: none;
+      background: white;
+      padding: 20px;
+      border-radius: 0 5px 5px 5px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #495057;
+    }
+    
+    input, select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      font-size: 14px;
+      transition: border-color 0.3s ease;
+      box-sizing: border-box;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #165DFF;
+      box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.1);
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .btn-primary {
+      background-color: #165DFF;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #0E4BDB;
+    }
+    
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
+    
+    .btn-success {
+      background-color: #28a745;
+      color: white;
+    }
+    
+    .btn-success:hover {
+      background-color: #218838;
+    }
+    
+    .btn-danger {
+      background-color: #dc3545;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background-color: #c82333;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .status-box {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 400px;
+      overflow-y: auto;
+      background-color: #f8f9fa;
+      border: 1px solid #e9ecef;
+    }
+    
+    .status-success {
+      border-color: #28a745;
+      background-color: #d4edda;
+      color: #155724;
+    }
+    
+    .status-error {
+      border-color: #dc3545;
+      background-color: #f8d7da;
+      color: #721c24;
+    }
+    
+    .status-info {
+      border-color: #17a2b8;
+      background-color: #d1ecf1;
+      color: #0c5460;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      font-size: 14px;
+    }
+    
+    th, td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #dee2e6;
+    }
+    
+    th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #495057;
+    }
+    
+    tr:hover {
+      background-color: #f8f9fa;
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 5px;
+    }
+    
+    .small-btn {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+    
+    .code-block {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 4px;
+      border-left: 4px solid #165DFF;
+      font-family: monospace;
+      overflow-x: auto;
+      margin: 15px 0;
+    }
+    
+    .alert {
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+    
+    .alert-info {
+      background-color: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      color: #0d47a1;
+    }
+    
+    .alert-warning {
+      background-color: #fff3cd;
+      border-left: 4px solid #ffc107;
+      color: #856404;
+    }
+    
+    @media (max-width: 768px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+      
+      .tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+      }
+      
+      .tab-btn {
+        white-space: nowrap;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>Supabase API 测试工具</h1>
+  </div>
+
+  <div class="container">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('insert-account')">插入账号</button>
+      <button class="tab-btn" onclick="switchTab('query-accounts')">查询账号</button>
+      <button class="tab-btn" onclick="switchTab('account-images')">账号图片</button>
+      <button class="tab-btn" onclick="switchTab('view-test')">查询视图</button>
+      <button class="tab-btn" onclick="switchTab('api-info')">API 信息</button>
+    </div>
+
+    <!-- 插入账号标签页 -->
+    <div id="insert-account" class="tab-content active">
+      <h2>插入新账号</h2>
+      <div class="alert alert-info">
+        <strong>注意：</strong>此功能需要先登录商户账号才能使用。插入的账号将显示在用户浏览页面中。
+      </div>
+      
+      <form id="insert-form">
+        <div class="form-group">
+          <label for="insert-account-name">账号名称 *</label>
+          <input type="text" id="insert-account-name" required placeholder="请输入账号名称">
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="insert-account-level">账号等级 *</label>
+            <input type="number" id="insert-account-level" min="1" required placeholder="请输入账号等级">
+          </div>
+          
+          <div class="form-group">
+            <label for="insert-haf-coin">哈夫币数量 *</label>
+            <input type="number" id="insert-haf-coin" min="0" required placeholder="请输入哈夫币数量">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="insert-stamina-level">体力等级 *</label>
+            <input type="number" id="insert-stamina-level" min="1" max="10" required placeholder="请输入体力等级 (1-10)">
+          </div>
+          
+          <div class="form-group">
+            <label for="insert-weight-level">负重等级 *</label>
+            <input type="number" id="insert-weight-level" min="1" max="10" required placeholder="请输入负重等级 (1-10)">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="insert-price">出售价格 *</label>
+          <input type="number" id="insert-price" min="1" required placeholder="请输入出售价格">
+        </div>
+        
+        <div class="form-group">
+          <label for="insert-description">账号描述 *</label>
+          <textarea id="insert-description" required placeholder="请输入账号详细描述"></textarea>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="insert-username">Steam用户名 *</label>
+            <input type="text" id="insert-username" required placeholder="请输入Steam用户名">
+          </div>
+          
+          <div class="form-group">
+            <label for="insert-password">Steam密码 *</label>
+            <input type="password" id="insert-password" required placeholder="请输入Steam密码">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="insert-other-info">其他信息</label>
+          <textarea id="insert-other-info" placeholder="请输入其他补充信息"></textarea>
+        </div>
+        
+        <div class="btn-group">
+          <button type="submit" class="btn btn-primary"><i class="fa fa-plus"></i> 插入账号</button>
+          <button type="button" class="btn btn-secondary" onclick="document.getElementById('insert-form').reset();"><i class="fa fa-refresh"></i> 重置</button>
+        </div>
+      </form>
+      
+      <div id="insert-status" class="status-box"></div>
+    </div>
+
+    <!-- 查询账号标签页 -->
+    <div id="query-accounts" class="tab-content">
+      <h2>查询账号列表</h2>
+      <div class="alert alert-info">
+        <strong>提示：</strong>查询所有账号需要商户权限，普通用户只能查询可用状态的账号。
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="query-status">账号状态</label>
+          <select id="query-status">
+            <option value="">全部状态</option>
+            <option value="available">可用</option>
+            <option value="sold">已售出</option>
+            <option value="pending">审核中</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="query-merchant-id">商户ID</label>
+          <input type="text" id="query-merchant-id" placeholder="按商户ID筛选">
+        </div>
+      </div>
+      
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="queryAccounts()"><i class="fa fa-search"></i> 查询账号</button>
+        <button class="btn btn-secondary" onclick="resetQueryFilters()"><i class="fa fa-refresh"></i> 重置筛选</button>
+      </div>
+      
+      <div id="query-status" class="status-box"></div>
+      
+      <div id="accounts-table-container">
+        <table id="accounts-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>账号名称</th>
+              <th>等级</th>
+              <th>哈夫币</th>
+              <th>价格</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="accounts-table-body">
+            <!-- 账号数据会动态插入到这里 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 账号图片标签页 -->
+    <div id="account-images" class="tab-content">
+      <h2>账号图片管理</h2>
+      <div class="alert alert-info">
+        <strong>提示：</strong>需要先创建账号，然后为该账号添加图片。
+      </div>
+      
+      <div class="form-group">
+        <label for="image-account-id">账号ID *</label>
+        <input type="text" id="image-account-id" required placeholder="请输入账号ID">
+      </div>
+      
+      <div class="form-group">
+        <label for="image-url">图片URL *</label>
+        <input type="text" id="image-url" required placeholder="请输入图片URL">
+      </div>
+      
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="addAccountImage()"><i class="fa fa-image"></i> 添加图片</button>
+        <button class="btn btn-success" onclick="getAccountImages()"><i class="fa fa-list"></i> 获取图片列表</button>
+      </div>
+      
+      <div id="image-status" class="status-box"></div>
+      
+      <div id="images-table-container" style="display: none;">
+        <h3 style="margin-top: 20px;">图片列表</h3>
+        <table id="images-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>账号ID</th>
+              <th>图片URL</th>
+              <th>上传时间</th>
+              <th>预览</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="images-table-body">
+            <!-- 图片数据会动态插入到这里 -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 查询视图标签页 -->
+    <div id="view-test" class="tab-content">
+      <h2>测试视图查询</h2>
+      <div class="alert alert-info">
+        <strong>提示：</strong>此功能测试对available_accounts_view视图的访问，普通用户也可以访问。
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="view-min-price">最低价格</label>
+          <input type="number" id="view-min-price" min="0" placeholder="最低价格">
+        </div>
+        
+        <div class="form-group">
+          <label for="view-min-level">最低等级</label>
+          <input type="number" id="view-min-level" min="1" placeholder="最低等级">
+        </div>
+      </div>
+      
+      <button class="btn btn-primary" onclick="queryAccountView()"><i class="fa fa-eye"></i> 查询视图数据</button>
+      
+      <div id="view-status" class="status-box"></div>
+      
+      <div id="view-results" style="margin-top: 20px;">
+        <!-- 视图查询结果会显示在这里 -->
+      </div>
+    </div>
+
+    <!-- API信息标签页 -->
+    <div id="api-info" class="tab-content">
+      <h2>Supabase API 使用指南</h2>
+      
+      <div class="alert alert-warning">
+        <strong>安全提示：</strong>请确保在生产环境中正确配置权限，并不要在前端暴露服务密钥。
+      </div>
+      
+      <h3>1. 基础配置</h3>
+      <div class="code-block">
+// Supabase配置
+const SUPABASE_URL = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+
+// 使用REST API的基础请求头
+const headers = {
+  'apikey': SUPABASE_ANON_KEY,
+  'Authorization': `Bearer ${userToken}`
+};
+      </div>
+      
+      <h3>2. 账号查询（用户端）</h3>
+      <div class="code-block">
+// 查询可用账号视图
+const response = await fetch(
+  'https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/available_accounts_view?order=created_at.desc',
+  {
+    headers: {
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${userToken}`
+    }
+  }
+);
+
+const accounts = await response.json();
+console.log('可用账号列表:', accounts);
+      </div>
+      
+      <h3>3. 账号插入（商户端）</h3>
+      <div class="code-block">
+// 插入新账号
+const accountData = {
+  account_name: '测试账号',
+  account_level: 30,
+  haf_coin: 8000,
+  stamina_level: 6,
+  weight_level: 7,
+  price: 450,
+  description: '测试账号描述',
+  username: 'testuser123',
+  password: 'testpassword',
+  // 移除created_at，数据库会自动设置默认值
+  status: 'available',
+  merchant_id: 'merchant_user_id' // 使用实际的用户UUID
+};
+
+const response = await fetch(
+  'https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/accounts',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${merchantToken}`
+    },
+    body: JSON.stringify(accountData)
+  }
+);
+      </div>
+      
+      <h3>4. 账号图片管理</h3>
+      <div class="code-block">
+// 添加账号图片
+const imageData = {
+  account_id: 'account_uuid_here',
+  image_url: 'https://example.com/image.jpg',
+  uploaded_at: new Date().toISOString()
+};
+
+const response = await fetch(
+  'https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/account_images',
+  {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${merchantToken}`
+    },
+    body: JSON.stringify(imageData)
+  }
+);
+      </div>
+      
+      <h3>5. 常用过滤条件</h3>
+      <div class="code-block">
+// 价格过滤: 大于等于500
+'price=gte.500'
+
+// 等级过滤: 小于等于40
+'account_level=lte.40'
+
+// 状态过滤
+'status=eq.available'
+
+// 多条件组合
+'price=gte.300&price=lte.1000&account_level=gte.20'
+
+// 排序
+'order=price.desc'
+
+// 限制返回数量
+'limit=10'
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Supabase配置
+    const SUPABASE_URL = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+    
+    // 获取token
+    function getToken() {
+      return localStorage.getItem('supabase.access_token') || '';
+    }
+    
+    // 切换标签页
+    function switchTab(tabId) {
+      // 隐藏所有标签内容
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // 移除所有按钮的激活状态
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // 显示选中的标签内容和激活按钮
+      document.getElementById(tabId).classList.add('active');
+      event.target.classList.add('active');
+    }
+    
+    // 显示状态消息
+    function showStatus(elementId, message, type = 'info') {
+      const statusBox = document.getElementById(elementId);
+      statusBox.textContent = message;
+      
+      // 移除所有状态类
+      statusBox.classList.remove('status-success', 'status-error', 'status-info');
+      
+      // 添加对应的状态类
+      if (type === 'success') statusBox.classList.add('status-success');
+      else if (type === 'error') statusBox.classList.add('status-error');
+      else statusBox.classList.add('status-info');
+    }
+    
+    // 插入账号表单提交
+    document.getElementById('insert-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const token = getToken();
+      if (!token) {
+        showStatus('insert-status', '请先登录商户账号', 'error');
+        return;
+      }
+      
+      try {
+        showStatus('insert-status', '正在提交数据...', 'info');
+        
+        // 首先获取当前用户信息
+        const userResponse = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': SUPABASE_ANON_KEY
+          }
+        });
+        
+        if (!userResponse.ok) {
+          throw new Error('获取用户信息失败');
+        }
+        
+        const userData = await userResponse.json();
+        
+        // 收集表单数据
+        const accountData = {
+          account_name: document.getElementById('insert-account-name').value,
+          account_level: parseInt(document.getElementById('insert-account-level').value),
+          haf_coin: parseInt(document.getElementById('insert-haf-coin').value),
+          stamina_level: parseInt(document.getElementById('insert-stamina-level').value),
+          weight_level: parseInt(document.getElementById('insert-weight-level').value),
+          price: parseInt(document.getElementById('insert-price').value),
+          description: document.getElementById('insert-description').value,
+          username: document.getElementById('insert-username').value,
+          password: document.getElementById('insert-password').value,
+          other_info: document.getElementById('insert-other-info').value || null,
+          // 移除created_at，数据库会自动设置默认值
+          status: 'available',
+          merchant_id: userData.id // 使用实际的用户UUID
+        };
+        
+        // 发送请求
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/accounts`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/vnd.pgrst.object+json'
+            },
+            body: JSON.stringify(accountData)
+          }
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`请求失败: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        showStatus('insert-status', JSON.stringify(result, null, 2), 'success');
+        
+        // 重置表单
+        document.getElementById('insert-form').reset();
+      } catch (error) {
+        showStatus('insert-status', `错误: ${error.message}`, 'error');
+        console.error('插入账号错误:', error);
+      }
+    });
+    
+    // 查询账号
+    async function queryAccounts() {
+      try {
+        showStatus('query-status', '正在查询数据...', 'info');
+        
+        const token = getToken();
+        const statusFilter = document.getElementById('query-status').value;
+        const merchantIdFilter = document.getElementById('query-merchant-id').value;
+        
+        // 构建查询参数
+        const params = new URLSearchParams();
+        
+        if (statusFilter) params.append('status', `eq.${statusFilter}`);
+        if (merchantIdFilter) params.append('merchant_id', `eq.${merchantIdFilter}`);
+        
+        params.append('order', 'created_at.desc');
+        
+        // 发送请求
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/accounts?${params.toString()}`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`请求失败: ${response.status} - ${errorText}`);
+        }
+        
+        const accounts = await response.json();
+        showStatus('query-status', JSON.stringify(accounts, null, 2), 'success');
+        
+        // 渲染表格
+        renderAccountsTable(accounts);
+      } catch (error) {
+        showStatus('query-status', `错误: ${error.message}`, 'error');
+        console.error('查询账号错误:', error);
+      }
+    }
+    
+    // 渲染账号表格
+    function renderAccountsTable(accounts) {
+      const tableBody = document.getElementById('accounts-table-body');
+      tableBody.innerHTML = '';
+      
+      if (accounts.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center;">没有找到账号数据</td></tr>';
+        return;
+      }
+      
+      accounts.forEach(account => {
+        const row = document.createElement('tr');
+        
+        const formattedDate = new Date(account.created_at).toLocaleString('zh-CN');
+        
+        row.innerHTML = `
+          <td>${account.id}</td>
+          <td>${account.account_name}</td>
+          <td>${account.account_level}</td>
+          <td>${account.haf_coin}</td>
+          <td>${account.price}</td>
+          <td>
+            <span style="
+              padding: 2px 8px;
+              border-radius: 12px;
+              font-size: 12px;
+              background-color: ${account.status === 'available' ? '#d4edda' : account.status === 'sold' ? '#f8d7da' : '#fff3cd'};
+              color: ${account.status === 'available' ? '#155724' : account.status === 'sold' ? '#721c24' : '#856404'};
+            ">
+              ${account.status === 'available' ? '可用' : account.status === 'sold' ? '已售出' : '审核中'}
+            </span>
+          </td>
+          <td>${formattedDate}</td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn btn-primary small-btn" onclick="viewAccountDetails('${account.id}')">详情</button>
+              <button class="btn btn-danger small-btn" onclick="deleteAccount('${account.id}')">删除</button>
+            </div>
+          </td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+    }
+    
+    // 重置查询筛选
+    function resetQueryFilters() {
+      document.getElementById('query-status').value = '';
+      document.getElementById('query-merchant-id').value = '';
+      document.getElementById('accounts-table-body').innerHTML = '';
+      document.getElementById('query-status').textContent = '';
+    }
+    
+    // 查看账号详情
+    async function viewAccountDetails(accountId) {
+      try {
+        const token = getToken();
+        
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`获取详情失败: ${response.status}`);
+        }
+        
+        const accounts = await response.json();
+        if (accounts.length > 0) {
+          alert(JSON.stringify(accounts[0], null, 2));
+        }
+      } catch (error) {
+        console.error('查看详情错误:', error);
+        alert('获取详情失败: ' + error.message);
+      }
+    }
+    
+    // 删除账号
+    async function deleteAccount(accountId) {
+      if (!confirm('确定要删除这个账号吗？')) return;
+      
+      try {
+        const token = getToken();
+        
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/accounts?id=eq.${accountId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`删除失败: ${response.status}`);
+        }
+        
+        alert('账号删除成功');
+        queryAccounts(); // 重新查询
+      } catch (error) {
+        console.error('删除错误:', error);
+        alert('删除失败: ' + error.message);
+      }
+    }
+    
+    // 添加账号图片
+    async function addAccountImage() {
+      try {
+        const token = getToken();
+        if (!token) {
+          showStatus('image-status', '请先登录商户账号', 'error');
+          return;
+        }
+        
+        const accountId = document.getElementById('image-account-id').value;
+        const imageUrl = document.getElementById('image-url').value;
+        
+        if (!accountId || !imageUrl) {
+          showStatus('image-status', '请填写账号ID和图片URL', 'error');
+          return;
+        }
+        
+        showStatus('image-status', '正在添加图片...', 'info');
+        
+        const imageData = {
+          account_id: accountId,
+          image_url: imageUrl,
+          uploaded_at: new Date().toISOString()
+        };
+        
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/account_images`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(imageData)
+          }
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`添加图片失败: ${response.status} - ${errorText}`);
+        }
+        
+        const result = await response.json();
+        showStatus('image-status', JSON.stringify(result, null, 2), 'success');
+        
+        // 清空图片URL输入框
+        document.getElementById('image-url').value = '';
+      } catch (error) {
+        showStatus('image-status', `错误: ${error.message}`, 'error');
+        console.error('添加图片错误:', error);
+      }
+    }
+    
+    // 获取账号图片列表
+    async function getAccountImages() {
+      try {
+        const token = getToken();
+        const accountId = document.getElementById('image-account-id').value;
+        
+        if (!accountId) {
+          showStatus('image-status', '请填写账号ID', 'error');
+          return;
+        }
+        
+        showStatus('image-status', '正在查询图片...', 'info');
+        
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/account_images?account_id=eq.${accountId}&order=uploaded_at.desc`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`查询图片失败: ${response.status} - ${errorText}`);
+        }
+        
+        const images = await response.json();
+        showStatus('image-status', JSON.stringify(images, null, 2), 'success');
+        
+        // 渲染图片表格
+        renderImagesTable(images);
+        document.getElementById('images-table-container').style.display = 'block';
+      } catch (error) {
+        showStatus('image-status', `错误: ${error.message}`, 'error');
+        console.error('查询图片错误:', error);
+      }
+    }
+    
+    // 渲染图片表格
+    function renderImagesTable(images) {
+      const tableBody = document.getElementById('images-table-body');
+      tableBody.innerHTML = '';
+      
+      if (images.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="6" style="text-align: center;">没有找到图片数据</td></tr>';
+        return;
+      }
+      
+      images.forEach(image => {
+        const row = document.createElement('tr');
+        const formattedDate = new Date(image.uploaded_at).toLocaleString('zh-CN');
+        
+        row.innerHTML = `
+          <td>${image.id}</td>
+          <td>${image.account_id}</td>
+          <td>${image.image_url}</td>
+          <td>${formattedDate}</td>
+          <td>
+            <img src="${image.image_url}" alt="预览" style="max-width: 100px; max-height: 80px; object-fit: cover; border-radius: 4px;">
+          </td>
+          <td>
+            <button class="btn btn-danger small-btn" onclick="deleteAccountImage('${image.id}')">删除</button>
+          </td>
+        `;
+        
+        tableBody.appendChild(row);
+      });
+    }
+    
+    // 删除账号图片
+    async function deleteAccountImage(imageId) {
+      if (!confirm('确定要删除这个图片吗？')) return;
+      
+      try {
+        const token = getToken();
+        
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/account_images?id=eq.${imageId}`,
+          {
+            method: 'DELETE',
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`删除图片失败: ${response.status}`);
+        }
+        
+        alert('图片删除成功');
+        getAccountImages(); // 重新查询
+      } catch (error) {
+        console.error('删除图片错误:', error);
+        alert('删除失败: ' + error.message);
+      }
+    }
+    
+    // 查询账号视图
+    async function queryAccountView() {
+      try {
+        showStatus('view-status', '正在查询视图数据...', 'info');
+        
+        const token = getToken();
+        const minPrice = document.getElementById('view-min-price').value;
+        const minLevel = document.getElementById('view-min-level').value;
+        
+        // 构建查询参数
+        const params = new URLSearchParams();
+        
+        if (minPrice) params.append('price', `gte.${minPrice}`);
+        if (minLevel) params.append('account_level', `gte.${minLevel}`);
+        
+        params.append('order', 'created_at.desc');
+        
+        // 发送请求
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/available_accounts_view?${params.toString()}`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': token ? `Bearer ${token}` : ''
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`查询失败: ${response.status} - ${errorText}`);
+        }
+        
+        const accounts = await response.json();
+        showStatus('view-status', JSON.stringify(accounts, null, 2), 'success');
+        
+        // 渲染结果卡片
+        renderAccountViewCards(accounts);
+      } catch (error) {
+        showStatus('view-status', `错误: ${error.message}`, 'error');
+        console.error('查询视图错误:', error);
+      }
+    }
+    
+    // 渲染账号视图卡片
+    function renderAccountViewCards(accounts) {
+      const container = document.getElementById('view-results');
+      container.innerHTML = '';
+      
+      if (accounts.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">没有找到符合条件的账号</p>';
+        return;
+      }
+      
+      // 创建卡片网格
+      const grid = document.createElement('div');
+      grid.style.display = 'grid';
+      grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+      grid.style.gap = '20px';
+      grid.style.marginTop = '20px';
+      
+      accounts.forEach(account => {
+        const card = document.createElement('div');
+        card.style.border = '1px solid #ddd';
+        card.style.borderRadius = '8px';
+        card.style.padding = '15px';
+        card.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        
+        const mainImage = account.image_urls && account.image_urls.length > 0 ? 
+          account.image_urls[0] : 
+          'https://via.placeholder.com/300x200?text=暂无图片';
+        
+        card.innerHTML = `
+          <img src="${mainImage}" alt="${account.account_name}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 4px; margin-bottom: 15px;">
+          <h3 style="margin: 0 0 10px 0; font-size: 18px;">${account.account_name}</h3>
+          <p style="margin: 5px 0; color: #666;">等级: ${account.account_level} | 哈夫币: ${account.haf_coin}</p>
+          <p style="margin: 5px 0; color: #666;">体力: ${account.stamina_level} | 负重: ${account.weight_level}</p>
+          <p style="margin: 10px 0 0 0; font-size: 18px; font-weight: bold; color: #ff4d4f;">${account.price} 积分</p>
+        `;
+        
+        grid.appendChild(card);
+      });
+      
+      container.appendChild(grid);
+    }
+  </script>
+</body>
+</html>

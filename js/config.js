@@ -1,7 +1,7 @@
-// Supabase 配置 - 替换为你的实际项目信息
+// Supabase 配置
 const SUPABASE_CONFIG = {
-    url: 'https://你的项目ID.supabase.co',  // 替换为你的 URL
-    anonKey: '你的anon公钥'  // 替换为你的 anon key
+    url: 'https://ubxbdfkpneeibbylkdwo.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs'
 };
 
 // 系统配置

@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>账号上架 - Steam账号管理系统（商户后台）</title>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: "Microsoft YaHei", sans-serif; }
+    body { background-color: #f5f5f5; color: #333; min-height: 100vh; }
+    .nav { background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 0 20px; height: 60px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; }
+    .nav-logo i { color: #2196f3; font-size: 24px; }
+    .nav-logo span { font-size: 18px; font-weight: bold; }
+    .nav-logout { color: #f44336; border: none; background: transparent; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 4px; transition: background 0.2s; }
+    .nav-logout:hover { background: #fef2f2; }
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+    .card { background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); padding: 20px; margin-bottom: 20px; }
+    .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .card-header i { width: 40px; height: 40px; border-radius: 50%; background: #e3f2fd; color: #2196f3; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .card-header h2 { font-size: 18px; font-weight: bold; color: #333; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #333; }
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #2196f3;
+      box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    }
+    .form-group textarea { resize: vertical; min-height: 120px; }
+    .form-row { display: flex; gap: 15px; margin-bottom: 20px; }
+    .form-row .form-group { flex: 1; margin-bottom: 0; }
+    .image-upload {
+      border: 2px dashed #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background-color: #fafafa;
+    }
+    .image-upload:hover {
+      border-color: #2196f3;
+      background-color: #f0f9ff;
+    }
+    .image-upload i { font-size: 32px; color: #9ca3af; margin-bottom: 10px; }
+    .image-upload p { color: #6b7280; font-size: 14px; }
+    .image-upload input[type="file"] { display: none; }
+    .uploaded-images {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .image-preview {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #e5e7eb;
+    }
+    .image-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .image-preview .remove-image {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: rgba(255, 255, 255, 0.9);
+      border: none;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #f44336;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    .image-preview .remove-image:hover {
+      background: #f44336;
+      color: white;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-primary {
+      background-color: #2196f3;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #1976d2;
+    }
+    .btn-primary:disabled {
+      background-color: #90caf9;
+      cursor: not-allowed;
+    }
+    .alert {
+      padding: 12px 16px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .alert-success { background-color: #dcfce7; color: #16a34a; }
+    .alert-error { background-color: #fee2e2; color: #dc2626; }
+    .alert-info { background-color: #dbeafe; color: #2563eb; }
+    .debug-area {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: white;
+      padding: 10px 20px;
+      box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+      font-size: 12px;
+      z-index: 99;
+    }
+    .debug-output {
+      margin-top: 8px;
+      color: #666;
+      max-height: 100px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-logo">
+      <i class="fa fa-steam"></i>
+      <span>Steam账号管理系统</span>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <button id="back-btn" class="nav-logout" style="color: #2196f3; border: none; background: transparent; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 5px; padding: 6px 12px; border-radius: 4px; transition: background 0.2s;">
+        <i class="fa fa-arrow-left"></i>返回后台
+      </button>
+      <button id="logout-btn" class="nav-logout"><i class="fa fa-sign-out"></i>退出登录</button>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div id="add-alert" class="alert" style="display:none;"></div>
+    
+    <div class="card">
+      <div class="card-header"><i class="fa fa-cloud-upload"></i><h2>账号上架</h2></div>
+      
+      <form id="account-upload-form">
+        <div class="form-group">
+          <label for="account-name">账号名称 <span style="color: #dc2626;">*</span></label>
+          <input type="text" id="account-name" name="account-name" placeholder="请输入账号名称" required>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="account-level">账号等级 <span style="color: #dc2626;">*</span></label>
+            <input type="number" id="account-level" name="account-level" placeholder="请输入账号等级" min="1" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="account-haf-coin">哈夫币数量 <span style="color: #dc2626;">*</span></label>
+            <input type="number" id="account-haf-coin" name="account-haf-coin" placeholder="请输入哈夫币数量" min="0" required>
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label for="account-stamina">体力等级 <span style="color: #dc2626;">*</span></label>
+            <input type="number" id="account-stamina" name="account-stamina" placeholder="请输入体力等级" min="1" max="10" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="account-weight">负重等级 <span style="color: #dc2626;">*</span></label>
+            <input type="number" id="account-weight" name="account-weight" placeholder="请输入负重等级" min="1" max="10" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="account-price">出售价格 (积分) <span style="color: #dc2626;">*</span></label>
+          <input type="number" id="account-price" name="account-price" placeholder="请输入价格" min="1" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="account-description">账号介绍 <span style="color: #dc2626;">*</span></label>
+          <textarea id="account-description" name="account-description" placeholder="请详细描述账号信息，包括游戏数量、等级、特殊道具等"></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label>账号截图 <span style="color: #666; font-weight: normal; font-size: 13px;">(可选，最多上传5张)</span></label>
+          <div id="image-upload" class="image-upload">
+            <input type="file" id="file-input" accept="image/*" multiple>
+            <i class="fa fa-picture-o"></i>
+            <p>点击或拖拽图片到此处上传</p>
+          </div>
+          <div id="uploaded-images" class="uploaded-images"></div>
+        </div>
+        
+        <div class="form-group">
+          <label for="account-username">Steam用户名 <span style="color: #dc2626;">*</span></label>
+          <input type="text" id="account-username" name="account-username" placeholder="请输入Steam用户名" required>
+        </div>
+        
+        <div class="form-group">
+          <label for="account-password">Steam密码 <span style="color: #dc2626;">*</span></label>
+          <div style="position: relative;">
+            <input type="password" id="account-password" name="account-password" placeholder="请输入Steam密码" required>
+            <button type="button" id="toggle-password" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #666;">显示</button>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="account-details">其他信息</label>
+          <textarea id="account-details" name="account-details" placeholder="可填写邮箱、邮箱密码等额外信息"></textarea>
+        </div>
+        
+        <button type="submit" id="submit-btn" class="btn btn-primary">
+          <i class="fa fa-check"></i> 确认上架
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="debug-area">
+    <h4 style="margin:0 0 8px 0; color:#666; display:inline-block;">调试工具</h4>
+    <button id="debug-current-user" class="btn btn-default" style="font-size:12px; padding:4px 8px; margin-left:10px;">检查当前用户</button>
+    <div class="debug-output" id="debug-output"></div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem('supabase.access_token');
+    const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+    const uploadedImages = [];
+    
+    function showAlert(elId, message, type = 'success') {
+      const el = document.getElementById(elId);
+      if (!el) return;
+      el.className = `alert alert-${type}`;
+      el.innerHTML = `<i class="fa ${type==='success'?'fa-check-circle':type==='error'?'fa-exclamation-circle':'fa-circle-o-notch fa-spin'}"></i>${message}`;
+      el.style.display = 'block';
+      setTimeout(() => { el.style.display = 'none'; }, 3500);
+    }
+    
+    async function checkAuth() {
+      if (!token) { window.location.href = 'merchant-login.html'; return false; }
+      try {
+        const r = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/auth/v1/user', {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+        });
+        if (r.ok) return true;
+        // token 可能过期，尝试用 refresh_token 刷新
+        const refreshToken = localStorage.getItem('supabase.refresh_token');
+        if (!refreshToken) { window.location.href = 'merchant-login.html'; return false; }
+        const rr = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/auth/v1/token?grant_type=refresh_token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': anonKey },
+          body: JSON.stringify({ refresh_token: refreshToken })
+        });
+        if (!rr.ok) { window.location.href = 'merchant-login.html'; return false; }
+        const data = await rr.json();
+        token = data.access_token;
+        localStorage.setItem('supabase.access_token', token);
+        if (data.refresh_token) localStorage.setItem('supabase.refresh_token', data.refresh_token);
+        return true;
+      } catch { return false; }
+    }
+    
+    // 图片上传预览
+    function setupImageUpload() {
+      const imageUpload = document.getElementById('image-upload');
+      const fileInput = document.getElementById('file-input');
+      const uploadedImagesContainer = document.getElementById('uploaded-images');
+      
+      imageUpload.addEventListener('click', () => fileInput.click());
+      
+      fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        
+        // 检查图片数量限制
+        if (uploadedImages.length + files.length > 5) {
+          showAlert('add-alert', '最多只能上传5张图片', 'error');
+          fileInput.value = '';
+          return;
+        }
+        
+        files.forEach(file => {
+          // 检查文件类型
+          if (!file.type.startsWith('image/')) {
+            showAlert('add-alert', '请上传图片格式的文件', 'error');
+            return;
+          }
+          
+          // 创建预览
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            uploadedImages.push({
+              file: file,
+              src: event.target.result
+            });
+            
+            updateImagePreviews();
+          };
+          reader.readAsDataURL(file);
+        });
+        
+        // 清空input，允许重复选择相同文件
+        fileInput.value = '';
+      });
+      
+      // 拖拽上传功能
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        imageUpload.addEventListener(eventName, preventDefaults, false);
+      });
+      
+      function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      
+      ['dragenter', 'dragover'].forEach(eventName => {
+        imageUpload.addEventListener(eventName, highlight, false);
+      });
+      
+      ['dragleave', 'drop'].forEach(eventName => {
+        imageUpload.addEventListener(eventName, unhighlight, false);
+      });
+      
+      function highlight() {
+        imageUpload.style.borderColor = '#2196f3';
+        imageUpload.style.backgroundColor = '#f0f9ff';
+      }
+      
+      function unhighlight() {
+        imageUpload.style.borderColor = '#e5e7eb';
+        imageUpload.style.backgroundColor = '#fafafa';
+      }
+      
+      imageUpload.addEventListener('drop', handleDrop, false);
+      
+      function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = Array.from(dt.files);
+        
+        // 检查图片数量限制
+        if (uploadedImages.length + files.length > 5) {
+          showAlert('add-alert', '最多只能上传5张图片', 'error');
+          return;
+        }
+        
+        files.forEach(file => {
+          if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              uploadedImages.push({
+                file: file,
+                src: event.target.result
+              });
+              
+              updateImagePreviews();
+            };
+            reader.readAsDataURL(file);
+          }
+        });
+      }
+    }
+    
+    function updateImagePreviews() {
+      const container = document.getElementById('uploaded-images');
+      container.innerHTML = '';
+      
+      uploadedImages.forEach((image, index) => {
+        const preview = document.createElement('div');
+        preview.className = 'image-preview';
+        
+        const img = document.createElement('img');
+        img.src = image.src;
+        img.alt = `预览图 ${index + 1}`;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-image';
+        removeBtn.innerHTML = '<i class="fa fa-times"></i>';
+        removeBtn.onclick = () => {
+          uploadedImages.splice(index, 1);
+          updateImagePreviews();
+        };
+        
+        preview.appendChild(img);
+        preview.appendChild(removeBtn);
+        container.appendChild(preview);
+      });
+    }
+    
+    async function uploadAccount() {
+      const ok = await checkAuth();
+      if (!ok) { showAlert('add-alert', '未登录或token已过期，请重新登录', 'error'); return; }
+      
+      const submitBtn = document.getElementById('submit-btn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa fa-circle-o-notch fa-spin"></i> 提交中...';
+      
+      try {
+        // 首先获取当前用户信息
+        const userResponse = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/auth/v1/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'apikey': anonKey
+          }
+        });
+        
+        // 添加响应状态检查
+        if (!userResponse.ok) {
+          const errorText = await userResponse.text();
+          throw new Error(`获取用户信息失败: HTTP ${userResponse.status} ${errorText || '未知错误'}`);
+        }
+        
+        // 检查响应是否为空
+        const responseText = await userResponse.text();
+        if (!responseText) {
+          throw new Error('获取用户信息失败: 服务器返回空响应');
+        }
+        
+        // 安全地解析JSON
+        let userData;
+        try {
+          userData = JSON.parse(responseText);
+        } catch (jsonError) {
+          throw new Error(`解析用户数据失败: ${jsonError.message}\n响应内容: ${responseText}`);
+        }
+        
+        // 验证用户数据是否包含必要的ID字段
+        if (!userData || !userData.id) {
+          throw new Error(`用户数据格式错误: 缺少ID字段\n用户数据: ${JSON.stringify(userData)}`);
+        }
+        
+        // 收集表单数据并进行类型验证
+        const formData = {
+          account_name: document.getElementById('account-name').value,
+          account_level: validateAndParseInt(document.getElementById('account-level').value, '账号等级'),
+          haf_coin: validateAndParseInt(document.getElementById('account-haf-coin').value, '哈希币'),
+          stamina_level: validateAndParseInt(document.getElementById('account-stamina').value, '耐力等级'),
+          weight_level: validateAndParseInt(document.getElementById('account-weight').value, '负重等级'),
+          price: validateAndParseInt(document.getElementById('account-price').value, '价格'),
+          description: document.getElementById('account-description').value,
+          username: document.getElementById('account-username').value,
+          password: document.getElementById('account-password').value,
+          other_info: document.getElementById('account-details').value,
+          status: 'available',
+          merchant_id: userData.id // 使用实际的用户UUID
+        };
+        
+        // 辅助函数：验证并解析整数值
+        function validateAndParseInt(value, fieldName) {
+          const num = parseInt(value);
+          if (isNaN(num) || num < 0) {
+            throw new Error(`${fieldName}必须是有效的非负整数`);
+          }
+          return num;
+        }
+        
+        // 首先创建账号记录（不包含图片URLs）
+        const createResp = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/accounts', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'apikey': anonKey,
+            'Accept': 'application/vnd.pgrst.object+json'
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        if (!createResp.ok) {
+          const errorText = await createResp.text();
+          console.error('创建账号失败:', errorText);
+          // 检查是否为权限错误
+          if (errorText.includes('permission denied') || errorText.includes('Unauthorized') || errorText.includes('403')) {
+            showAlert('add-alert', '权限错误：您没有权限执行此操作，请检查Supabase权限设置', 'error');
+          } else {
+            showAlert('add-alert', `创建账号失败：${errorText}`, 'error');
+          }
+          return;
+        }
+        
+        // 安全地解析响应JSON
+        let accountData;
+        const createRespText = await createResp.text();
+        
+        if (!createRespText.trim()) {
+          throw new Error('账号创建成功但返回空响应');
+        }
+        
+        try {
+          accountData = JSON.parse(createRespText);
+          console.log('账号创建成功:', accountData);
+        } catch (jsonError) {
+          throw new Error(`解析账号数据失败: ${jsonError.message}\n响应内容: ${createRespText}`);
+        }
+        
+        // 验证账号数据是否包含必要的ID字段
+        if (!accountData || !accountData.id) {
+          throw new Error(`账号数据格式错误: 缺少ID字段\n账号数据: ${JSON.stringify(accountData)}`);
+        }
+        
+        // 如果有上传的图片，保存到account_images表
+        if (uploadedImages.length > 0) {
+          const imagePromises = uploadedImages.map(async (image) => {
+            const imageData = {
+              account_id: accountData.id,
+              image_url: image.src,
+              uploaded_at: new Date().toISOString()
+            };
+            
+            const imageResp = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/account_images', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'apikey': anonKey
+              },
+              body: JSON.stringify(imageData)
+            });
+            
+            if (!imageResp.ok) {
+              const errorText = await imageResp.text();
+              throw new Error(`保存图片失败: ${errorText}`);
+            }
+            // 安全地解析图片上传响应
+            const imageResponseText = await imageResp.text();
+            if (!imageResponseText.trim()) {
+              throw new Error('图片上传成功但返回空响应');
+            }
+            
+            try {
+              return JSON.parse(imageResponseText);
+            } catch (imageJsonError) {
+              throw new Error(`解析图片上传响应失败: ${imageJsonError.message}\n响应内容: ${imageResponseText}`);
+            }
+          });
+          
+          await Promise.all(imagePromises);
+          console.log('所有图片保存成功');
+        }
+        
+        showAlert('add-alert', '账号上架成功！', 'success');
+        
+        // 重置表单
+        document.getElementById('account-upload-form').reset();
+        uploadedImages.length = 0;
+        updateImagePreviews();
+        
+      } catch (err) {
+        console.error('上传失败:', err);
+        showAlert('add-alert', `上传失败：${err.message}`, 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa fa-check"></i> 确认上架';
+      }
+    }
+    
+    // 调试功能
+    async function debugCurrentUser() {
+      try {
+        const ok = await checkAuth();
+        if (!ok) return;
+        
+        const r = await fetch('https://ubxbdfkpneeibbylkdwo.supabase.co/auth/v1/user', {
+          headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+        });
+        
+        const data = await r.json();
+        document.getElementById('debug-output').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById('debug-output').textContent = `错误：${err.message}`;
+      }
+    }
+    
+    // 退出登录
+    function logout() {
+      localStorage.removeItem('supabase.access_token');
+      localStorage.removeItem('supabase.refresh_token');
+      window.location.href = 'merchant-login.html';
+    }
+    
+    // 密码可见性切换功能已经在初始化函数中实现
+
+    // 页面加载时初始化
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 检查认证
+      await checkAuth();
+      
+      // 设置图片上传
+      setupImageUpload();
+      
+      // 添加密码可见性切换功能
+      const toggleBtn = document.getElementById('toggle-password');
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+          const passwordInput = document.getElementById('account-password');
+          const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+          passwordInput.setAttribute('type', type);
+          this.textContent = type === 'password' ? '显示' : '隐藏';
+        });
+      }
+      
+      // 表单提交处理
+      document.getElementById('account-upload-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        uploadAccount();
+      });
+      
+      // 事件监听
+      document.getElementById('back-btn').addEventListener('click', () => {
+        window.location.href = 'merchant-dashboard.html';
+      });
+      document.getElementById('logout-btn').addEventListener('click', logout);
+      document.getElementById('debug-current-user').addEventListener('click', debugCurrentUser);
+    });
+  </script>
+</body>
+</html>

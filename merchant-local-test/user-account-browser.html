@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>账号购买页面</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 0;
+      color: #333;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .header {
+      background-color: #165DFF;
+      color: white;
+      padding: 15px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 500;
+    }
+    
+    .header-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary {
+      background-color: #165DFF;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #0E4BDB;
+    }
+    
+    .btn-default {
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    
+    .btn-default:hover {
+      background-color: #e0e0e0;
+    }
+    
+    .filter-section {
+      background-color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      align-items: end;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .filter-group label {
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #666;
+    }
+    
+    .filter-group select,
+    .filter-group input {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .account-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    
+    .account-card {
+      background-color: white;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .account-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .account-image {
+      height: 200px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .account-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    
+    .account-card:hover .account-image img {
+      transform: scale(1.05);
+    }
+    
+    .account-info {
+      padding: 15px;
+    }
+    
+    .account-title {
+      font-size: 18px;
+      font-weight: 500;
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    
+    .account-stats {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+    
+    .stat-item {
+      display: flex;
+      align-items: center;
+      font-size: 14px;
+      color: #666;
+    }
+    
+    .stat-item i {
+      margin-right: 5px;
+      color: #165DFF;
+    }
+    
+    .account-description {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 15px;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    
+    .account-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 15px 15px 15px;
+    }
+    
+    .account-price {
+      font-size: 18px;
+      font-weight: 600;
+      color: #ff4d4f;
+    }
+    
+    .skeleton {
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+    }
+    
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+    
+    .skeleton-title {
+      height: 24px;
+      width: 70%;
+      margin-bottom: 10px;
+    }
+    
+    .skeleton-stat {
+      height: 16px;
+      width: 40%;
+      margin-bottom: 8px;
+    }
+    
+    .skeleton-desc {
+      height: 48px;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    
+    .skeleton-price {
+      height: 20px;
+      width: 30%;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal-content {
+      background-color: white;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 500;
+    }
+    
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #999;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .account-detail-image {
+      max-height: 400px;
+      overflow: hidden;
+      margin-bottom: 20px;
+      border-radius: 8px;
+    }
+    
+    .account-detail-image img {
+      width: 100%;
+      height: auto;
+    }
+    
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .detail-label {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .detail-value {
+      font-size: 16px;
+      font-weight: 500;
+    }
+    
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    @media (max-width: 768px) {
+      .account-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .detail-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-content">
+      <h1>账号购买平台</h1>
+      <div class="header-actions">
+        <button class="btn btn-default" id="login-btn"><i class="fa fa-user"></i> 登录</button>
+        <button class="btn btn-primary"><i class="fa fa-shopping-cart"></i> 我的订单</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="filter-section">
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label for="min-level">最低等级</label>
+          <input type="number" id="min-level" min="1" placeholder="最低等级">
+        </div>
+        <div class="filter-group">
+          <label for="min-coin">最低哈夫币</label>
+          <input type="number" id="min-coin" min="0" placeholder="最低哈夫币">
+        </div>
+        <div class="filter-group">
+          <label for="min-stamina">最低体力</label>
+          <select id="min-stamina">
+            <option value="">不限</option>
+            <option value="5">5级以上</option>
+            <option value="7">7级以上</option>
+            <option value="9">9级以上</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="min-weight">最低负重</label>
+          <select id="min-weight">
+            <option value="">不限</option>
+            <option value="5">5级以上</option>
+            <option value="7">7级以上</option>
+            <option value="9">9级以上</option>
+          </select>
+        </div>
+        <div class="filter-group">
+          <label for="max-price">最高价格</label>
+          <input type="number" id="max-price" min="1" placeholder="最高价格">
+        </div>
+        <div class="filter-group" style="grid-column: 1 / -1; margin-top: 10px;">
+          <button class="btn btn-primary" id="search-btn"><i class="fa fa-search"></i> 搜索账号</button>
+          <button class="btn btn-default" id="reset-btn"><i class="fa fa-refresh"></i> 重置筛选</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="account-grid" class="account-grid">
+      <!-- 账号卡片会动态插入这里 -->
+    </div>
+
+    <div class="modal" id="account-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">账号详情</h2>
+          <button class="close-btn" id="close-modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="account-detail-image">
+            <img id="modal-image" src="" alt="账号图片">
+          </div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <span class="detail-label">账号等级</span>
+              <span class="detail-value" id="modal-level">--</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">哈夫币数量</span>
+              <span class="detail-value" id="modal-coin">--</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">体力等级</span>
+              <span class="detail-value" id="modal-stamina">--</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">负重等级</span>
+              <span class="detail-value" id="modal-weight">--</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">出售价格</span>
+              <span class="detail-value" id="modal-price" style="color: #ff4d4f;">--</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">上架时间</span>
+              <span class="detail-value" id="modal-time">--</span>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">账号描述</span>
+            <div class="detail-value" id="modal-description" style="white-space: pre-wrap;">--</div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-default" id="buy-btn">立即购买</button>
+          <button class="btn btn-primary" id="close-modal-btn">关闭</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 模拟数据（实际应用中会从Supabase获取）
+    let mockAccounts = [];
+    
+    // 模拟的Supabase配置
+    const anonKey = 'your_anon_key_here';
+    
+    // 页面加载时获取账号列表
+    document.addEventListener('DOMContentLoaded', () => {
+      // 显示加载骨架屏
+      showSkeletons();
+      
+      // 获取账号数据
+      fetchAccounts();
+      
+      // 绑定搜索按钮事件
+      document.getElementById('search-btn').addEventListener('click', fetchAccounts);
+      document.getElementById('reset-btn').addEventListener('click', resetFilters);
+      
+      // 绑定模态框事件
+      document.getElementById('close-modal').addEventListener('click', closeModal);
+      document.getElementById('close-modal-btn').addEventListener('click', closeModal);
+      document.getElementById('buy-btn').addEventListener('click', buyAccount);
+      
+      // 点击模态框外部关闭
+      document.getElementById('account-modal').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeModal();
+      });
+    });
+    
+    // 显示骨架屏
+    function showSkeletons() {
+      const grid = document.getElementById('account-grid');
+      grid.innerHTML = '';
+      
+      // 创建6个骨架屏卡片
+      for (let i = 0; i < 6; i++) {
+        const skeletonCard = document.createElement('div');
+        skeletonCard.className = 'account-card';
+        skeletonCard.innerHTML = `
+          <div class="account-image skeleton"></div>
+          <div class="account-info">
+            <div class="skeleton skeleton-title"></div>
+            <div class="skeleton skeleton-stat"></div>
+            <div class="skeleton skeleton-stat"></div>
+            <div class="skeleton skeleton-desc"></div>
+            <div class="skeleton skeleton-price"></div>
+          </div>
+        `;
+        grid.appendChild(skeletonCard);
+      }
+    }
+    
+    // 获取账号列表
+    async function fetchAccounts() {
+      try {
+        // 构建查询参数
+        const params = new URLSearchParams();
+        
+        const minLevel = document.getElementById('min-level').value;
+        const minCoin = document.getElementById('min-coin').value;
+        const minStamina = document.getElementById('min-stamina').value;
+        const minWeight = document.getElementById('min-weight').value;
+        const maxPrice = document.getElementById('max-price').value;
+        
+        if (minLevel) params.append('account_level', `gte.${minLevel}`);
+        if (minCoin) params.append('haf_coin', `gte.${minCoin}`);
+        if (minStamina) params.append('stamina_level', `gte.${minStamina}`);
+        if (minWeight) params.append('weight_level', `gte.${minWeight}`);
+        if (maxPrice) params.append('price', `lte.${maxPrice}`);
+        
+        // 从视图中获取数据
+        const response = await fetch(
+          `https://ubxbdfkpneeibbylkdwo.supabase.co/rest/v1/available_accounts_view?${params.toString()}&order=created_at.desc`,
+          {
+            headers: {
+              'apikey': anonKey,
+              'Authorization': `Bearer ${localStorage.getItem('supabase.access_token') || ''}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`获取账号列表失败: ${response.status}`);
+        }
+        
+        const accounts = await response.json();
+        mockAccounts = accounts;
+        
+        // 如果没有数据，使用模拟数据
+        if (accounts.length === 0) {
+          mockAccounts = generateMockAccounts();
+        }
+        
+        renderAccounts(mockAccounts);
+      } catch (error) {
+        console.error('获取账号列表出错:', error);
+        // 发生错误时使用模拟数据
+        mockAccounts = generateMockAccounts();
+        renderAccounts(mockAccounts);
+      }
+    }
+    
+    // 生成模拟数据
+    function generateMockAccounts() {
+      return [
+        {
+          id: '1',
+          account_name: '高级游戏账号',
+          account_level: 50,
+          haf_coin: 15000,
+          stamina_level: 8,
+          weight_level: 9,
+          price: 800,
+          description: '这是一个高等级账号，拥有丰富的游戏经验和装备。账号内有大量游戏币和稀有道具，适合喜欢高起点游戏体验的玩家。',
+          created_at: '2024-01-15T10:30:00Z',
+          image_urls: ['https://via.placeholder.com/600x400?text=高级账号']
+        },
+        {
+          id: '2',
+          account_name: '新手友好账号',
+          account_level: 20,
+          haf_coin: 5000,
+          stamina_level: 5,
+          weight_level: 6,
+          price: 300,
+          description: '适合新手玩家的账号，等级适中，有足够的资源让你快速上手游戏。账号状态良好，没有封禁记录。',
+          created_at: '2024-01-16T09:15:00Z',
+          image_urls: ['https://via.placeholder.com/600x400?text=新手账号']
+        },
+        {
+          id: '3',
+          account_name: '稀有皮肤账号',
+          account_level: 45,
+          haf_coin: 12000,
+          stamina_level: 7,
+          weight_level: 8,
+          price: 650,
+          description: '拥有多个稀有皮肤和限定道具的账号，外观非常炫酷。账号等级和资源也很不错，性价比高。',
+          created_at: '2024-01-17T14:20:00Z',
+          image_urls: ['https://via.placeholder.com/600x400?text=稀有皮肤']
+        }
+      ];
+    }
+    
+    // 渲染账号列表
+    function renderAccounts(accounts) {
+      const grid = document.getElementById('account-grid');
+      grid.innerHTML = '';
+      
+      if (accounts.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #666;">
+            <i class="fa fa-search" style="font-size: 48px; margin-bottom: 20px; opacity: 0.3;"></i>
+            <p>没有找到符合条件的账号</p>
+          </div>
+        `;
+        return;
+      }
+      
+      accounts.forEach(account => {
+        const card = document.createElement('div');
+        card.className = 'account-card';
+        card.dataset.id = account.id;
+        
+        const mainImage = account.image_urls && account.image_urls.length > 0 ? 
+          account.image_urls[0] : 
+          'https://via.placeholder.com/600x400?text=暂无图片';
+        
+        const formattedDate = new Date(account.created_at).toLocaleDateString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        });
+        
+        card.innerHTML = `
+          <div class="account-image">
+            <img src="${mainImage}" alt="${account.account_name}">
+          </div>
+          <div class="account-info">
+            <h3 class="account-title">${account.account_name}</h3>
+            <div class="account-stats">
+              <div class="stat-item"><i class="fa fa-level-up"></i> Lv.${account.account_level}</div>
+              <div class="stat-item"><i class="fa fa-diamond"></i> ${account.haf_coin}币</div>
+            </div>
+            <div class="account-stats">
+              <div class="stat-item"><i class="fa fa-bolt"></i> 体力:${account.stamina_level}</div>
+              <div class="stat-item"><i class="fa fa-balance-scale"></i> 负重:${account.weight_level}</div>
+            </div>
+            <p class="account-description">${account.description}</p>
+          </div>
+          <div class="account-footer">
+            <span class="account-price">${account.price} 积分</span>
+            <button class="btn btn-primary view-details">查看详情</button>
+          </div>
+        `;
+        
+        grid.appendChild(card);
+        
+        // 绑定查看详情事件
+        card.querySelector('.view-details').addEventListener('click', () => {
+          showAccountDetails(account);
+        });
+      });
+    }
+    
+    // 显示账号详情
+    function showAccountDetails(account) {
+      const modal = document.getElementById('account-modal');
+      
+      // 设置模态框内容
+      document.getElementById('modal-title').textContent = account.account_name;
+      document.getElementById('modal-image').src = account.image_urls && account.image_urls.length > 0 ? 
+        account.image_urls[0] : 'https://via.placeholder.com/800x600?text=暂无图片';
+      document.getElementById('modal-level').textContent = account.account_level;
+      document.getElementById('modal-coin').textContent = account.haf_coin;
+      document.getElementById('modal-stamina').textContent = account.stamina_level;
+      document.getElementById('modal-weight').textContent = account.weight_level;
+      document.getElementById('modal-price').textContent = `${account.price} 积分`;
+      document.getElementById('modal-time').textContent = new Date(account.created_at).toLocaleString('zh-CN');
+      document.getElementById('modal-description').textContent = account.description;
+      
+      // 存储当前选中的账号ID
+      modal.dataset.accountId = account.id;
+      
+      // 显示模态框
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden'; // 防止背景滚动
+    }
+    
+    // 关闭模态框
+    function closeModal() {
+      const modal = document.getElementById('account-modal');
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    
+    // 购买账号
+    function buyAccount() {
+      const accountId = document.getElementById('account-modal').dataset.accountId;
+      const account = mockAccounts.find(a => a.id === accountId);
+      
+      if (!localStorage.getItem('supabase.access_token')) {
+        alert('请先登录');
+        return;
+      }
+      
+      // 这里应该实现购买逻辑，包括：
+      // 1. 检查用户积分是否足够
+      // 2. 扣除积分
+      // 3. 更新账号状态
+      // 4. 生成订单记录
+      // 5. 显示购买成功信息
+      
+      alert(`购买账号 "${account.account_name}" 成功！价格: ${account.price} 积分`);
+      closeModal();
+      fetchAccounts(); // 重新加载账号列表
+    }
+    
+    // 重置筛选条件
+    function resetFilters() {
+      document.getElementById('min-level').value = '';
+      document.getElementById('min-coin').value = '';
+      document.getElementById('min-stamina').value = '';
+      document.getElementById('min-weight').value = '';
+      document.getElementById('max-price').value = '';
+    }
+  </script>
+</body>
+</html>

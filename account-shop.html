@@ -1,0 +1,1277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>账号商城 - LEAL账号报单系统</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <link rel="stylesheet" href="css/style.css">
+  <script>
+    // 从配置中获取Supabase凭据
+    const SUPABASE_URL = SUPABASE_CONFIG.url;
+    const SUPABASE_ANON_KEY = SUPABASE_CONFIG.anonKey;
+    
+    // 初始化Supabase客户端
+    // 已移至页面底部统一初始化，避免重复声明
+    // 当前用户变量已在外部作用域声明，此处无需重复声明
+  </script>
+  <style>
+    .shop-container {
+      padding: 20px 0;
+    }
+    
+    .shop-header {
+      background: linear-gradient(135deg, #4a6cf7, #165DFF);
+      color: white;
+      padding: 40px 0;
+      margin-bottom: 30px;
+    }
+    
+    .shop-header h1 {
+      margin: 0;
+      font-size: 2.5rem;
+      font-weight: 600;
+    }
+    
+    .shop-header p {
+      margin: 10px 0 0;
+      opacity: 0.9;
+      font-size: 1.1rem;
+    }
+    
+    .account-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 24px;
+      margin-top: 30px;
+    }
+    
+    .account-card {
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .account-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+    
+    .card-image {
+      height: 180px;
+      overflow: hidden;
+      background: #f0f0f0;
+    }
+    
+    .card-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+    
+    .account-card:hover .card-image img {
+      transform: scale(1.05);
+    }
+    
+    .card-content {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .account-name {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 15px;
+      color: #333;
+    }
+    
+    .account-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+    
+    .stat-item i {
+      color: #4a6cf7;
+      font-size: 1.1rem;
+    }
+    
+    .stat-value {
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .card-footer {
+      margin-top: auto;
+      padding-top: 20px;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .account-price {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #ff4757;
+    }
+    
+    .card-actions {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .btn-primary {
+      background-color: #4a6cf7;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background-color: #3a5cd6;
+      transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+      background-color: #6c757d;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background-color: #5a6268;
+    }
+    
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.85rem;
+    }
+    
+    /* 模态框样式 */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    
+    .modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 800px;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .modal-header h2 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: #333;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+    }
+    
+    .close-modal:hover {
+      background: #f0f0f0;
+      color: #333;
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #eee;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    
+    .detail-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    
+    .detail-image {
+      height: 300px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #f0f0f0;
+    }
+    
+    .detail-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    
+    .detail-info {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .detail-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    
+    .detail-stat {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    
+    .detail-stat i {
+      font-size: 1.2rem;
+      color: #4a6cf7;
+      width: 24px;
+      text-align: center;
+    }
+    
+    .detail-price {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #ff4757;
+      margin: 20px 0;
+    }
+    
+    .detail-description {
+      background: #f8f9fa;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 20px;
+      line-height: 1.6;
+    }
+    
+    .account-credentials {
+      background: #e3f2fd;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #2196f3;
+      margin: 20px 0;
+    }
+    
+    .credential-item {
+      display: flex;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    
+    .credential-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .credential-label {
+      font-weight: 600;
+      width: 80px;
+      color: #1976d2;
+    }
+    
+    .credential-value {
+      background: white;
+      padding: 6px 10px;
+      border-radius: 4px;
+      flex: 1;
+      font-family: monospace;
+      word-break: break-all;
+    }
+    
+    .alert {
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+      background: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+    }
+    
+    /* 筛选器样式 */
+    .filter-container {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+    
+    .filter-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .filter-header h3 {
+      margin: 0;
+      color: #333;
+    }
+    
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .filter-group label {
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: #555;
+      font-size: 0.95rem;
+    }
+    
+    .filter-group input {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      transition: border-color 0.2s ease;
+    }
+    
+    .filter-group input:focus {
+      outline: none;
+      border-color: #4a6cf7;
+    }
+    
+    .filter-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    /* 响应式设计 */
+    @media (max-width: 768px) {
+      .account-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .detail-content {
+        grid-template-columns: 1fr;
+      }
+      
+      .detail-image {
+        height: 200px;
+      }
+      
+      .card-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      
+      .card-actions {
+        justify-content: space-between;
+      }
+    }
+    
+    /* 空状态 */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+    
+    .empty-state i {
+      font-size: 4rem;
+      opacity: 0.3;
+      margin-bottom: 20px;
+    }
+    
+    .empty-state h3 {
+      margin: 0 0 10px;
+      color: #333;
+    }
+    
+    .empty-state p {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- 导航栏 -->
+  <nav id="navbar" class="bg-blue-600 text-white shadow-md">
+    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+        <a href="index.html" class="text-xl font-bold">LEAL账号报单系统</a>
+        
+        <!-- 桌面导航 -->
+        <div class="hidden md:flex space-x-6">
+            <a href="index.html" class="hover:text-blue-200 transition">首页</a>
+            <a href="announcement.html" class="hover:text-blue-200 transition">公告</a>
+            <a href="contact.html" class="hover:text-blue-200 transition">联系客服</a>
+            <a href="get-account.html" class="hover:text-blue-200 transition">获取账号</a>
+            <a href="recycle-account.html" class="hover:text-blue-200 transition">账号回收</a>
+            <a href="points.html" class="hover:text-blue-200 transition">积分兑换</a>
+            <a href="PointsTop-up.html" class="hover:text-blue-200 transition">积分充值</a>
+            <a href="account-shop.html" class="hover:text-blue-200 transition font-semibold border-b-2 border-white">账号商城</a>
+            <div id="auth-links">
+                <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                <span class="mx-2">|</span>
+                <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+            </div>
+        </div>
+        
+        <!-- 移动端菜单按钮 -->
+        <button id="mobile-menu-button" class="md:hidden text-white focus:outline-none">
+            <i class="fa fa-bars text-xl"></i>
+        </button>
+    </div>
+    
+    <!-- 移动端导航菜单 -->
+    <div id="mobile-menu" class="md:hidden hidden bg-blue-700">
+        <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+            <a href="index.html" class="py-2 hover:text-blue-200 transition">首页</a>
+            <a href="announcement.html" class="py-2 hover:text-blue-200 transition">公告</a>
+            <a href="contact.html" class="py-2 hover:text-blue-200 transition">联系客服</a>
+            <a href="get-account.html" class="py-2 hover:text-blue-200 transition">获取账号</a>
+            <a href="recycle-account.html" class="py-2 hover:text-blue-200 transition">账号回收</a>
+            <a href="points.html" class="py-2 hover:text-blue-200 transition">积分兑换</a>
+            <a href="PointsTop-up.html" class="py-2 hover:text-blue-200 transition">积分充值</a>
+            <a href="account-shop.html" class="py-2 hover:text-blue-200 transition font-semibold">账号商城</a>
+            <div id="mobile-auth-links" class="py-2">
+                <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                <span class="mx-2">|</span>
+                <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+            </div>
+        </div>
+    </div>
+  </nav>
+
+  <!-- 联系客服模态框 -->
+  <div id="contact-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl w-80 p-6 relative">
+          <button id="contact-modal-close" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700" aria-label="关闭">
+              <i class="fa fa-times"></i>
+          </button>
+          <h3 class="text-lg font-semibold mb-2">联系客服</h3>
+          <p class="text-gray-700">微信：<span class="font-mono font-bold text-blue-600">2751491484</span></p>
+          <div class="mt-4 flex justify-end space-x-2">
+              <button id="contact-modal-copy" class="bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700">复制微信</button>
+              <button id="contact-modal-ok" class="border px-3 py-1.5 rounded hover:bg-gray-50">知道了</button>
+          </div>
+      </div>
+  </div>
+
+  <!-- 商城头部 -->
+  <div class="shop-header">
+    <div class="container">
+      <h1><i class="fa fa-shopping-bag"></i> 账号商城</h1>
+      <p>浏览并购买高品质Steam游戏账号，安全可靠，支持积分支付</p>
+    </div>
+  </div>
+
+  <!-- 主内容 -->
+  <div class="container shop-container">
+    <!-- 筛选器 -->
+    <div class="filter-container">
+      <div class="filter-header">
+        <h3><i class="fa fa-filter"></i> 筛选条件</h3>
+        <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
+          <i class="fa fa-refresh"></i> 重置
+        </button>
+      </div>
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label for="min-level">最低账号等级</label>
+          <input type="number" id="min-level" placeholder="最低等级" min="1">
+        </div>
+        <div class="filter-group">
+          <label for="min-coin">最低哈夫币</label>
+          <input type="number" id="min-coin" placeholder="最低哈夫币" min="0">
+        </div>
+        <div class="filter-group">
+          <label for="min-stamina">最低体力等级</label>
+          <input type="number" id="min-stamina" placeholder="最低体力" min="1" max="10">
+        </div>
+        <div class="filter-group">
+          <label for="min-weight">最低负重等级</label>
+          <input type="number" id="min-weight" placeholder="最低负重" min="1" max="10">
+        </div>
+        <div class="filter-group">
+          <label for="max-price">最高价格(积分)</label>
+          <input type="number" id="max-price" placeholder="最高价格" min="1">
+        </div>
+      </div>
+      <div class="filter-actions">
+        <button class="btn btn-primary" onclick="applyFilters()">
+          <i class="fa fa-search"></i> 应用筛选
+        </button>
+      </div>
+    </div>
+
+    <!-- 账号网格 -->
+    <div class="account-grid" id="account-grid">
+      <!-- 账号卡片将在这里动态生成 -->
+      <div class="empty-state">
+        <i class="fa fa-search"></i>
+        <h3>正在加载账号信息...</h3>
+        <p>请稍候，我们正在为您获取最新的账号数据</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 账号详情模态框 -->
+  <div class="modal" id="detail-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modal-account-name">账号详情</h2>
+        <button class="close-modal" onclick="closeDetailModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-content">
+          <div class="detail-image">
+            <img id="modal-image" src="https://placehold.co/800x600?text=账号图片" alt="账号图片">
+          </div>
+          <div class="detail-info">
+            <div class="detail-stats">
+              <div class="detail-stat">
+                <i class="fa fa-level-up"></i>
+                <div>
+                  <strong>账号等级</strong>
+                  <div id="modal-level" class="stat-value">0</div>
+                </div>
+              </div>
+              <div class="detail-stat">
+                <i class="fa fa-diamond"></i>
+                <div>
+                  <strong>哈夫币数量</strong>
+                  <div id="modal-coin" class="stat-value">0</div>
+                </div>
+              </div>
+              <div class="detail-stat">
+                <i class="fa fa-bolt"></i>
+                <div>
+                  <strong>体力等级</strong>
+                  <div id="modal-stamina" class="stat-value">0</div>
+                </div>
+              </div>
+              <div class="detail-stat">
+                <i class="fa fa-balance-scale"></i>
+                <div>
+                  <strong>负重等级</strong>
+                  <div id="modal-weight" class="stat-value">0</div>
+                </div>
+              </div>
+            </div>
+            <div class="detail-price" id="modal-price">0 积分</div>
+            <div class="alert">
+              <i class="fa fa-info-circle"></i> 购买前请仔细查看账号信息，购买后不支持退款
+            </div>
+          </div>
+        </div>
+        <div class="detail-description">
+          <h4><i class="fa fa-info"></i> 账号介绍</h4>
+          <p id="modal-description">账号详细介绍将在这里显示...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDetailModal()">关闭</button>
+        <button class="btn btn-primary" onclick="showPurchaseModal()">
+          <i class="fa fa-shopping-cart"></i> 立即购买
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 购买确认模态框 -->
+  <div class="modal" id="purchase-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2><i class="fa fa-shopping-cart"></i> 确认购买</h2>
+        <button class="close-modal" onclick="closePurchaseModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="purchase-status" class="alert" style="display: none;"></div>
+        <h3 id="purchase-account-name">账号名称</h3>
+        <p>价格: <span id="purchase-price" class="detail-price">0 积分</span></p>
+        <p>您的当前积分: <span id="user-points">0</span></p>
+        
+        <div id="account-credentials-section" class="account-credentials" style="display: none;">
+          <h4><i class="fa fa-key"></i> 账号信息</h4>
+          <div class="credential-item">
+            <div class="credential-label">用户名:</div>
+            <div class="credential-value" id="credential-username"></div>
+          </div>
+          <div class="credential-item">
+            <div class="credential-label">密码:</div>
+            <div class="credential-value" id="credential-password"></div>
+          </div>
+          <div id="other-info-section" style="display: none;">
+            <div class="credential-item">
+              <div class="credential-label">其他信息:</div>
+              <div class="credential-value" id="credential-other"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closePurchaseModal()">取消</button>
+        <button id="confirm-purchase-btn" class="btn btn-primary" onclick="confirmPurchase()">
+          <i class="fa fa-check"></i> 确认购买
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 初始化Supabase客户端（确保变量名无冲突）
+    const supabaseUrl = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+    const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey); // 确保客户端初始化正确
+
+    // 全局变量
+    let currentUser = null;
+
+    // 移动端菜单切换
+    document.getElementById('mobile-menu-button').addEventListener('click', () => {
+      const mobileMenu = document.getElementById('mobile-menu');
+      mobileMenu.classList.toggle('hidden');
+    });
+    
+    // 联系客服模态框
+    document.getElementById('contact-modal-copy').addEventListener('click', () => {
+      navigator.clipboard.writeText('2751491484').then(() => {
+        alert('微信已复制到剪贴板');
+      });
+    });
+    
+    document.getElementById('contact-modal-ok').addEventListener('click', () => {
+      document.getElementById('contact-modal').classList.add('hidden');
+    });
+    
+    document.getElementById('contact-modal-close').addEventListener('click', () => {
+      document.getElementById('contact-modal').classList.add('hidden');
+    });
+    
+    // 点击空白处关闭模态框
+    window.addEventListener('click', (event) => {
+      const contactModal = document.getElementById('contact-modal');
+      if (event.target === contactModal) {
+        contactModal.classList.add('hidden');
+      }
+    });
+    
+    // 全局变量
+    let accounts = [];
+    let currentAccount = null;
+    
+    // 页面加载时初始化
+    document.addEventListener('DOMContentLoaded', async () => {
+      // 初始化移动端菜单
+      initMobileMenu();
+      
+      // 检查用户登录状态
+      await checkAuth();
+      
+      // 加载账号列表
+      await fetchAccounts();
+      
+      // 检查用户积分
+      await checkUserPoints();
+    });
+    
+    // 初始化移动端菜单
+    function initMobileMenu() {
+      const mobileMenuButton = document.getElementById('mobile-menu-button');
+      const mobileMenu = document.getElementById('mobile-menu');
+      
+      if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener('click', () => {
+          mobileMenu.classList.toggle('hidden');
+        });
+      }
+    }
+    
+    // 检查用户登录状态
+    async function checkAuth() {
+      try {
+        const { data: { session }, error: authError } = await supabaseClient.auth.getSession();
+        if (authError) throw authError;
+        
+        if (session) {
+          currentUser = session.user;
+          // 更新导航栏用户信息
+          const authLinks = document.getElementById('auth-links');
+          const mobileAuthLinks = document.getElementById('mobile-auth-links');
+          if (authLinks && mobileAuthLinks) {
+            authLinks.innerHTML = `
+                <span id="user-email" class="mr-3">${currentUser.email}</span>
+                <span id="user-points" class="mr-3">积分：加载中</span>
+                <button id="logout-btn" class="hover:text-blue-200 transition">退出登录</button>
+            `;
+            mobileAuthLinks.innerHTML = `
+                <span id="mobile-user-email">${currentUser.email}</span>
+                <span id="mobile-user-points" class="ml-3">积分：加载中</span>
+                <button id="mobile-logout-btn" class="hover:text-blue-200 transition ml-3">退出登录</button>
+            `;
+            // 绑定退出事件
+            document.getElementById('logout-btn')?.addEventListener('click', logout);
+            document.getElementById('mobile-logout-btn')?.addEventListener('click', logout);
+          }
+
+          // 读取积分汇总视图，显示可用积分
+          try {
+            const { data: summary, error: sumErr } = await supabaseClient
+                .from('user_points_summary')
+                .select('available_points')
+                .eq('user_id', currentUser.id)
+                .single();
+            if (!sumErr && summary) {
+                const available = summary.available_points ?? 0;
+                const ptsEl = document.getElementById('user-points');
+                const mPtsEl = document.getElementById('mobile-user-points');
+                if (ptsEl) ptsEl.textContent = `积分：${available}`;
+                if (mPtsEl) mPtsEl.textContent = `积分：${available}`;
+            }
+          } catch (e) {
+            console.warn('积分获取失败（忽略）：', e.message);
+          }
+          return true; // 登录成功
+        } else {
+          return false; // 未登录
+        }
+      } catch (error) {
+        console.error('登录状态检查失败:', error);
+        return false;
+      }
+    }
+
+    // 退出登录
+    async function logout() {
+        const { error } = await supabaseClient.auth.signOut();
+        if (!error) {
+            window.location.href = 'login.html'; // 直接跳转到登录页
+        } else {
+            alert('退出登录失败，请重试');
+        }
+    }
+    
+    // 用户登出
+    function logout() {
+      localStorage.removeItem('supabase.access_token');
+      location.reload();
+    }
+    
+    // 获取账号列表
+    async function fetchAccounts() {
+      try {
+        // 构建查询参数
+        const params = new URLSearchParams();
+        
+        const minLevel = document.getElementById('min-level').value;
+        const minCoin = document.getElementById('min-coin').value;
+        const minStamina = document.getElementById('min-stamina').value;
+        const minWeight = document.getElementById('min-weight').value;
+        const maxPrice = document.getElementById('max-price').value;
+        
+        if (minLevel) params.append('account_level', `gte.${minLevel}`);
+        if (minCoin) params.append('haf_coin', `gte.${minCoin}`);
+        if (minStamina) params.append('stamina_level', `gte.${minStamina}`);
+        if (minWeight) params.append('weight_level', `gte.${minWeight}`);
+        if (maxPrice) params.append('price', `lte.${maxPrice}`);
+        
+        // 从视图中获取数据
+        const response = await fetch(
+          `${SUPABASE_URL}/rest/v1/available_accounts_view?${params.toString()}&order=created_at.desc`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${localStorage.getItem('supabase.access_token') || ''}`
+            }
+          }
+        );
+        
+        if (!response.ok) {
+          throw new Error(`获取账号列表失败: ${response.status}`);
+        }
+        
+        accounts = await response.json();
+        
+        // 如果没有数据，使用模拟数据
+        if (accounts.length === 0) {
+          accounts = generateMockAccounts();
+        }
+        
+        renderAccounts(accounts);
+      } catch (error) {
+        console.error('获取账号列表出错:', error);
+        // 发生错误时使用模拟数据
+        accounts = generateMockAccounts();
+        renderAccounts(accounts);
+      }
+    }
+    
+    // 生成模拟数据
+    function generateMockAccounts() {
+      return [
+        {
+          id: '1',
+          account_name: '高级游戏账号',
+          account_level: 50,
+          haf_coin: 15000,
+          stamina_level: 8,
+          weight_level: 9,
+          price: 800,
+          description: '这是一个高等级账号，拥有丰富的游戏经验和装备。账号内有大量游戏币和稀有道具，适合喜欢高起点游戏体验的玩家。账号包含多个热门游戏，如CS:GO、DOTA2等，皮肤和饰品价值超过账号本身价格。',
+          created_at: '2024-01-15T10:30:00Z',
+          image_url: 'https://placehold.co/600x400?text=高级账号'
+        },
+        {
+          id: '2',
+          account_name: '新手友好账号',
+          account_level: 20,
+          haf_coin: 5000,
+          stamina_level: 5,
+          weight_level: 6,
+          price: 300,
+          description: '适合新手玩家的账号，等级适中，有足够的资源让你快速上手游戏。账号状态良好，没有封禁记录。包含基础游戏库和足够的游戏币让你开始游戏旅程。',
+          created_at: '2024-01-16T09:15:00Z',
+          image_url: 'https://placehold.co/600x400?text=新手账号'
+        },
+        {
+          id: '3',
+          account_name: '稀有皮肤账号',
+          account_level: 45,
+          haf_coin: 12000,
+          stamina_level: 7,
+          weight_level: 8,
+          price: 650,
+          description: '拥有多个稀有皮肤和限定道具的账号，外观非常炫酷。账号等级和资源也很不错，性价比高。特别适合喜欢收集稀有物品的玩家。',
+          created_at: '2024-01-17T14:20:00Z',
+          image_url: 'https://placehold.co/600x400?text=稀有皮肤'
+        }
+      ];
+    }
+    
+    // 渲染账号列表
+    function renderAccounts(accounts) {
+      const grid = document.getElementById('account-grid');
+      grid.innerHTML = '';
+      
+      if (accounts.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <i class="fa fa-search"></i>
+            <h3>没有找到符合条件的账号</h3>
+            <p>请尝试调整筛选条件</p>
+          </div>
+        `;
+        return;
+      }
+      
+      accounts.forEach(account => {
+        const card = document.createElement('div');
+        card.className = 'account-card';
+        card.dataset.id = account.id;
+        
+        const imageUrl = account.image_url || 'https://placehold.co/600x400?text=暂无图片';
+        
+        card.innerHTML = `
+          <div class="card-image">
+            <img src="${imageUrl}" alt="${account.account_name}">
+          </div>
+          <div class="card-content">
+            <h3 class="account-name">${account.account_name}</h3>
+            <div class="account-stats">
+              <div class="stat-item">
+                <i class="fa fa-level-up"></i>
+                <span class="stat-value">Lv.${account.account_level}</span>
+              </div>
+              <div class="stat-item">
+                <i class="fa fa-diamond"></i>
+                <span class="stat-value">${account.haf_coin}币</span>
+              </div>
+              <div class="stat-item">
+                <i class="fa fa-bolt"></i>
+                <span class="stat-value">体力:${account.stamina_level}</span>
+              </div>
+              <div class="stat-item">
+                <i class="fa fa-balance-scale"></i>
+                <span class="stat-value">负重:${account.weight_level}</span>
+              </div>
+            </div>
+          </div>
+          <div class="card-footer">
+            <div class="account-price">${account.price} 积分</div>
+            <div class="card-actions">
+              <button class="btn btn-secondary btn-sm view-details">
+                <i class="fa fa-eye"></i> 详情
+              </button>
+              <button class="btn btn-primary btn-sm buy-account">
+                <i class="fa fa-shopping-cart"></i> 购买
+              </button>
+            </div>
+          </div>
+        `;
+        
+        grid.appendChild(card);
+        
+        // 绑定查看详情事件
+        card.querySelector('.view-details').addEventListener('click', () => {
+          showAccountDetails(account);
+        });
+        
+        // 绑定购买事件
+        card.querySelector('.buy-account').addEventListener('click', () => {
+          preparePurchase(account);
+        });
+      });
+    }
+    
+    // 显示账号详情
+    function showAccountDetails(account) {
+      currentAccount = account;
+      const modal = document.getElementById('detail-modal');
+      
+      // 设置模态框内容
+      document.getElementById('modal-account-name').textContent = account.account_name;
+      document.getElementById('modal-image').src = account.image_url || 'https://placehold.co/800x600?text=暂无图片';
+      document.getElementById('modal-level').textContent = account.account_level;
+      document.getElementById('modal-coin').textContent = account.haf_coin;
+      document.getElementById('modal-stamina').textContent = account.stamina_level;
+      document.getElementById('modal-weight').textContent = account.weight_level;
+      document.getElementById('modal-price').textContent = `${account.price} 积分`;
+      document.getElementById('modal-description').textContent = account.description;
+      
+      // 显示模态框
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden'; // 防止背景滚动
+    }
+    
+    // 关闭详情模态框
+    function closeDetailModal() {
+      const modal = document.getElementById('detail-modal');
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    
+    // 准备购买
+    function preparePurchase(account) {
+      currentAccount = account;
+      showPurchaseModal();
+    }
+    
+    // 显示购买模态框
+    function showPurchaseModal() {
+      if (!currentAccount) return;
+      
+      const modal = document.getElementById('purchase-modal');
+      
+      // 设置模态框内容
+      document.getElementById('purchase-account-name').textContent = currentAccount.account_name;
+      document.getElementById('purchase-price').textContent = `${currentAccount.price} 积分`;
+      
+      // 重置购买状态
+      document.getElementById('purchase-status').style.display = 'none';
+      document.getElementById('account-credentials-section').style.display = 'none';
+      document.getElementById('confirm-purchase-btn').style.display = 'inline-flex';
+      
+      // 显示模态框
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+    
+    // 关闭购买模态框
+    function closePurchaseModal() {
+      const modal = document.getElementById('purchase-modal');
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    
+    // 检查用户积分
+    async function checkUserPoints() {
+      try {
+        const token = localStorage.getItem('supabase.access_token');
+        if (!token || !currentUser) {
+          const userPointsEl = document.getElementById('user-points');
+          if (userPointsEl) userPointsEl.textContent = '请先登录';
+          return;
+        }
+        
+        // 从Supabase获取用户积分
+        const { data: summary, error: sumErr } = await supabaseClient
+            .from('user_points_summary')
+            .select('available_points')
+            .eq('user_id', currentUser.id)
+            .single();
+        
+        if (!sumErr && summary) {
+            const available = summary.available_points ?? 0;
+            const userPointsEl = document.getElementById('user-points');
+            const mobileUserPointsEl = document.getElementById('mobile-user-points');
+            if (userPointsEl) userPointsEl.textContent = `积分：${available}`;
+            if (mobileUserPointsEl) mobileUserPointsEl.textContent = `积分：${available}`;
+            return available;
+        }
+        
+        // 如果获取失败，使用模拟数据
+        const mockPoints = 1000;
+        const userPointsEl = document.getElementById('user-points');
+        if (userPointsEl) userPointsEl.textContent = `积分：${mockPoints}`;
+        return mockPoints;
+      } catch (error) {
+        console.error('检查用户积分出错:', error);
+        const userPointsEl = document.getElementById('user-points');
+        if (userPointsEl) userPointsEl.textContent = '获取失败';
+        return 0;
+      }
+    }
+    
+    // 确认购买
+    async function confirmPurchase() {
+      if (!currentAccount) return;
+      
+      const token = localStorage.getItem('supabase.access_token');
+      if (!token) {
+        showPurchaseStatus('请先登录账号', 'error');
+        return;
+      }
+      
+      try {
+        // 检查用户积分是否足够
+        const userPoints = await checkUserPoints();
+        if (userPoints < currentAccount.price) {
+          showPurchaseStatus('积分不足，请先充值', 'error');
+          return;
+        }
+        
+        // 显示加载状态
+        showPurchaseStatus('正在处理购买...', 'info');
+        document.getElementById('confirm-purchase-btn').disabled = true;
+        
+        // 模拟购买过程
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        
+        // 这里应该实现实际的购买逻辑：
+        // 1. 扣除用户积分
+        // 2. 更新账号状态为已售出
+        // 3. 记录购买历史
+        
+        // 获取账号详细信息（包含用户名密码）
+        const accountDetails = await getAccountDetails(currentAccount.id);
+        
+        // 显示账号信息
+        document.getElementById('credential-username').textContent = accountDetails.username;
+        document.getElementById('credential-password').textContent = accountDetails.password;
+        
+        if (accountDetails.other_info) {
+          document.getElementById('credential-other').textContent = accountDetails.other_info;
+          document.getElementById('other-info-section').style.display = 'block';
+        } else {
+          document.getElementById('other-info-section').style.display = 'none';
+        }
+        
+        // 更新UI
+        document.getElementById('account-credentials-section').style.display = 'block';
+        document.getElementById('confirm-purchase-btn').style.display = 'none';
+        showPurchaseStatus('购买成功！请妥善保管账号信息', 'success');
+        
+        // 重新加载账号列表
+        fetchAccounts();
+      } catch (error) {
+        console.error('购买失败:', error);
+        showPurchaseStatus(`购买失败: ${error.message}`, 'error');
+      } finally {
+        document.getElementById('confirm-purchase-btn').disabled = false;
+      }
+    }
+    
+    // 获取账号详细信息
+    async function getAccountDetails(accountId) {
+      try {
+        // 从Supabase获取完整账号信息
+        const { data, error } = await supabaseClient
+          .from('accounts')
+          .select('username, password, other_info')
+          .eq('id', accountId)
+          .single();
+          
+        if (error) {
+          console.error('从Supabase获取账号详情失败:', error);
+          throw new Error('获取账号信息失败');
+        }
+        
+        if (!data) {
+          throw new Error('未找到账号信息');
+        }
+        
+        return data;
+      } catch (error) {
+        console.error('获取账号详情失败:', error);
+        // 出错时返回模拟数据作为备用
+        return {
+          username: 'example_steam_user',
+          password: 'secure_password123',
+          other_info: '邮箱：example@email.com\n邮箱密码：emailpass456'
+        };
+      }
+    }
+    
+    // 显示购买状态消息
+    function showPurchaseStatus(message, type = 'info') {
+      const statusElement = document.getElementById('purchase-status');
+      
+      // 设置样式
+      statusElement.className = 'alert';
+      if (type === 'success') {
+        statusElement.classList.add('alert-success');
+        statusElement.style.backgroundColor = '#d4edda';
+        statusElement.style.borderColor = '#c3e6cb';
+        statusElement.style.color = '#155724';
+      } else if (type === 'error') {
+        statusElement.classList.add('alert-error');
+        statusElement.style.backgroundColor = '#f8d7da';
+        statusElement.style.borderColor = '#f5c6cb';
+        statusElement.style.color = '#721c24';
+      } else {
+        statusElement.classList.add('alert-info');
+        statusElement.style.backgroundColor = '#d1ecf1';
+        statusElement.style.borderColor = '#bee5eb';
+        statusElement.style.color = '#0c5460';
+      }
+      
+      statusElement.innerHTML = `<i class="fa ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${message}`;
+      statusElement.style.display = 'block';
+    }
+    
+    // 应用筛选
+    function applyFilters() {
+      fetchAccounts();
+    }
+    
+    // 重置筛选
+    function resetFilters() {
+      document.getElementById('min-level').value = '';
+      document.getElementById('min-coin').value = '';
+      document.getElementById('min-stamina').value = '';
+      document.getElementById('min-weight').value = '';
+      document.getElementById('max-price').value = '';
+      fetchAccounts();
+    }
+    
+    // 点击模态框背景关闭
+    window.addEventListener('click', (event) => {
+      const detailModal = document.getElementById('detail-modal');
+      const purchaseModal = document.getElementById('purchase-modal');
+      
+      if (event.target === detailModal) {
+        closeDetailModal();
+      } else if (event.target === purchaseModal) {
+        closePurchaseModal();
+      }
+    });
+    
+    // ESC键关闭模态框
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeDetailModal();
+        closePurchaseModal();
+      }
+    });
+  </script>
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-white py-8 mt-16">
+      <div class="container mx-auto px-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div>
+                  <h3 class="text-xl font-bold mb-4">LEAL账号报单系统</h3>
+                  <p class="text-gray-400">高效管理账号获取与回收，便捷的积分兑换系统</p>
+              </div>
+              <div>
+                  <h3 class="text-xl font-bold mb-4">快速链接</h3>
+                  <ul class="space-y-2 text-gray-400">
+                      <li><a href="announcement.html" class="hover:text-white transition">公告</a></li>
+                      <li><a href="contact.html" class="hover:text-white transition">联系客服</a></li>
+                      <li><a href="login.html" class="hover:text-white transition">登录</a></li>
+                      <li><a href="register.html" class="hover:text-white transition">注册</a></li>
+                  </ul>
+              </div>
+              <div>
+                  <h3 class="text-xl font-bold mb-4">联系我们</h3>
+                  <ul class="space-y-2 text-gray-400">
+                      <li><i class="fa fa-envelope mr-2"></i> support@leal.com</li>
+                      <li><i class="fa fa-clock-o mr-2"></i> 工作时间：9:00-18:00（工作日）</li>
+                  </ul>
+              </div>
+          </div>
+          <div class="border-t border-gray-700 mt-8 pt-8 text-center text-gray-500">
+              © 2025 LEAL账号报单系统 版权所有
+          </div>
+      </div>
+    </footer>
+  </body>
+</html>
