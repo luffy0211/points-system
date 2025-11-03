@@ -558,7 +558,7 @@
                     showModalError('请输入有效的正整数积分数量');
                     return;
                 }
-                // 新增：校验不得超过可兑换积分（排除48小时冷却中的积分）
+                // 新增：校验不得超过可兑换积分（排除1小时冷却中的积分）
                 if (amount > (userPoints.redeemable || 0)) {
                     const msg = `超过可兑换积分。当前可兑换：${userPoints.redeemable || 0}，冷却中：${userPoints.cooling || 0}`;
                     showModalError(msg);
@@ -604,9 +604,9 @@
                     if (summary2) {
                         userPoints.current = summary2.total_earned || 0;
                         userPoints.available = summary2.available_points || 0;
-                        // 计算48小时冷却中的积分与可兑换积分
+                        // 计算1小时冷却中的积分与可兑换积分
                         try {
-                            const boundaryIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+                            const boundaryIso = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
                             const { data: recentEarns } = await supabase
                                 .from('points_transactions')
                                 .select('amount, type, created_at')
@@ -623,7 +623,7 @@
                                 if (Array.isArray(recentEarns) && recentEarns.length > 0) {
                                     const now = Date.now();
                                     const minRemainMs = recentEarns
-                                        .map(r => (new Date(r.created_at).getTime() + 48 * 60 * 60 * 1000) - now)
+                                        .map(r => (new Date(r.created_at).getTime() + 1 * 60 * 60 * 1000) - now)
                                         .filter(ms => ms > 0)
                                         .reduce((min, ms) => Math.min(min, ms), Infinity);
                                     if (isFinite(minRemainMs)) {
@@ -837,9 +837,9 @@
                 if (summary) {
                     userPoints.current = summary.total_earned || 0;
                     userPoints.available = summary.available_points || 0;
-                    // 计算48小时冷却中的积分与可兑换积分
+                    // 计算1小时冷却中的积分与可兑换积分
                     try {
-                        const boundaryIso = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+                        const boundaryIso = new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString();
                         const { data: recentEarns } = await supabase
                             .from('points_transactions')
                             .select('amount, type, created_at')
@@ -856,7 +856,7 @@
                             if (Array.isArray(recentEarns) && recentEarns.length > 0) {
                                 const now = Date.now();
                                 const minRemainMs = recentEarns
-                                    .map(r => (new Date(r.created_at).getTime() + 48 * 60 * 60 * 1000) - now)
+                                    .map(r => (new Date(r.created_at).getTime() + 1 * 60 * 60 * 1000) - now)
                                     .filter(ms => ms > 0)
                                     .reduce((min, ms) => Math.min(min, ms), Infinity);
                                 if (isFinite(minRemainMs)) {
