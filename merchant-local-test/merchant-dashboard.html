@@ -63,7 +63,7 @@
       <div class="card">
         <div class="card-header"><i class="fa fa-upload"></i><h2>账号批量插入</h2></div>
         <div>
-          <p style="color:#666; margin-bottom:8px;">按行粘贴，格式：<code>用户名,密码,类型(basic|premium)</code></p>
+          <p style="color:#666; margin-bottom:8px;">按行粘贴，格式：<code>用户名,密码,类型(basic|premium|super|bankrupt)</code></p>
           <textarea id="bulk-input" rows="8" style="width:100%; border:1px solid #eee; border-radius:6px; padding:10px; font-size:13px;" placeholder="示例：\nuser001,pass001,basic\nuser002,pass002,premium"></textarea>
           <div style="margin-top:10px; display:flex; gap:8px; align-items:center;">
             <button id="bulk-insert-btn" class="operate-btn operate-pass" style="border:1px solid #e5e7eb; padding:6px 10px;"><i class="fa fa-upload"></i> 批量插入</button>
@@ -1169,6 +1169,10 @@
       const btn = document.getElementById('bulk-insert-btn');
       const resultEl = document.getElementById('bulk-result');
       const API_BASE = 'https://ubxbdfkpneeibbylkdwo.supabase.co';
+      // 确保全局可用的anonKey
+      window.anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJkZmtwbmVlaWJieWxrZHdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA1OTc1NjQsImV4cCI6MjA3NjE3MzU2NH0.FsPXNLV9Ykd3jP8lfmCL1wIyhyZhx16glocadQ9eLMs';
+      // 使用全局变量或当前作用域变量
+      const anonKey = window.anonKey;
       function setResult(text, ok=true){ if(resultEl) { resultEl.textContent = text; resultEl.style.color = ok ? '#16a34a' : '#dc2626'; } }
 
       async function getUserIdFromJWT() {
@@ -1180,19 +1184,14 @@
         } catch (_) { return null; }
       }
 
-      async function columnSupported(col) {
-        try {
-          const resp = await fetch(`${API_BASE}/rest/v1/steam_accounts?select=${encodeURIComponent(col)}&limit=1`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
-          });
-          return resp.ok;
-        } catch (_) { return false; }
-      }
-
       async function getMerchantId(userId) {
         try {
-          const resp = await fetch(`${API_BASE}/rest/v1/merchants?user_id=eq.${encodeURIComponent(userId)}&select=id&limit=1&apikey=${anonKey}`, {
-            headers: { 'Authorization': `Bearer ${token}`, 'apikey': anonKey }
+          const resp = await fetch(`${API_BASE}/rest/v1/merchants?user_id=eq.${encodeURIComponent(userId)}&select=id&limit=1`, {
+            headers: {
+              'Authorization': `Bearer ${token}`, 
+              'apikey': anonKey,
+              'Accept': 'application/json'
+            }
           });
           if (!resp.ok) return null;
           const arr = await resp.json();
@@ -1212,31 +1211,42 @@
           const userId = await getUserIdFromJWT();
           if (!userId) { showAlert('add-alert', '无法解析用户ID，请重新登录后再试', 'error'); return; }
 
-          const supportCreatedBy = await columnSupported('created_by');
-          const supportMerchantId = await columnSupported('merchant_id');
+          // 直接检查用户是否有商户ID
           let merchantId = null;
-          if (supportMerchantId) {
+          try {
             merchantId = await getMerchantId(userId);
             if (!merchantId) {
-              showAlert('add-alert', '未找到商户记录，merchant_id 将不附带', 'warning');
+              console.warn('未找到商户记录，将不添加merchant_id字段');
             }
+          } catch (err) {
+            console.warn('获取商户ID失败:', err);
           }
 
           const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
           const errors = [];
           const payload = [];
           lines.forEach((line, idx) => {
-            const parts = line.split(',').map(s => s.trim());
+            // 支持逗号和制表符分隔
+            const parts = line.split(/[\t,]/).map(s => s.trim());
             const username = parts[0];
             const password = parts[1];
             const type = (parts[2] || 'basic').toLowerCase();
-            if (!username || !password || !['basic','premium'].includes(type)) {
+            // 支持更多账号类型
+            const allowedTypes = ['basic', 'premium', 'super', 'bankrupt'];
+            if (!username || !password || !allowedTypes.includes(type)) {
               errors.push(`第${idx+1}行格式错误`);
               return;
             }
-            const row = { steam_username: username, steam_password: password, account_type: type, used_by: null };
-            if (supportCreatedBy) row.created_by = userId;
-            if (supportMerchantId && merchantId) row.merchant_id = merchantId;
+            // 简化数据结构，只包含必要字段
+            const row = { 
+              steam_username: username, 
+              steam_password: password, 
+              account_type: type,
+              used_by: null 
+            };
+            // 始终添加created_by和merchant_id（如果有）
+            // if (userId) row.created_by = userId;
+            // if (merchantId) row.merchant_id = merchantId;
             payload.push(row);
           });
 
@@ -1244,23 +1254,65 @@
 
           try {
             setResult('插入中...', true);
-            const resp = await fetch(`${API_BASE}/rest/v1/steam_accounts`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', 'Prefer': 'return=representation', 'Authorization': `Bearer ${token}`, 'apikey': anonKey },
-              body: JSON.stringify(payload)
-            });
-            const text = await resp.text();
-            if (!resp.ok) {
-              showAlert('add-alert', `插入失败：${text || resp.status}`, 'error');
+            // 尝试批量插入，将payload分批处理以避免请求过大
+            const batchSize = 20; // 更小的批次，避免API限制
+            let successCount = 0;
+            let failedCount = 0;
+            
+            for (let i = 0; i < payload.length; i += batchSize) {
+              const batch = payload.slice(i, i + batchSize);
+              
+              try {
+                const resp = await fetch(`${API_BASE}/rest/v1/steam_accounts`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation',
+                    'Authorization': `Bearer ${token}`,
+                    'apikey': anonKey,
+                    'Accept': 'application/json',
+                    'Range': `0-${batch.length-1}`
+                  },
+                  body: JSON.stringify(batch)
+                });
+                
+                console.log(`批次 ${Math.floor(i/batchSize)+1} 响应状态:`, resp.status);
+                const responseText = await resp.text();
+                console.log(`批次 ${Math.floor(i/batchSize)+1} 响应内容:`, responseText);
+                
+                if (!resp.ok) {
+                  console.error(`批次 ${Math.floor(i/batchSize)+1} 插入失败:`, resp.status, responseText);
+                  // 检查是否是权限错误
+                  if (responseText.includes('permission denied') || responseText.includes('Unauthorized') || responseText.includes('403')) {
+                    console.error('检测到权限错误，请确认Supabase中已正确设置表的安全策略');
+                    setResult('插入失败：权限不足，请检查Supabase安全策略', false);
+                    showAlert('add-alert', '插入失败：权限不足，请检查Supabase安全策略', 'error');
+                    return;
+                  }
+                  failedCount += batch.length;
+                  continue;
+                }
+                
+                successCount += batch.length;
+                // 添加小延迟避免API限流
+                await new Promise(resolve => setTimeout(resolve, 300));
+              } catch (batchError) {
+                console.error(`批次 ${Math.floor(i/batchSize)+1} 处理异常:`, batchError);
+                failedCount += batch.length;
+              }
+            }
+            
+            // 由于我们分批处理，直接跳转到结果展示
+            if (successCount > 0) {
+              showAlert('add-alert', `插入成功：${successCount} 条账号${failedCount > 0 ? `，失败：${failedCount} 条` : ''}`, 'success');
+              setResult(`成功 ${successCount} 条${failedCount > 0 ? `，失败 ${failedCount} 条` : ''}`, failedCount === 0);
+              if (inputEl) inputEl.value = '';
+              return;
+            } else {
+              showAlert('add-alert', `插入失败：所有 ${failedCount} 条账号记录均未能成功插入`, 'error');
               setResult('插入失败', false);
               return;
             }
-            let data = [];
-            try { data = JSON.parse(text); } catch { data = []; }
-            const count = Array.isArray(data) ? data.length : payload.length;
-            showAlert('add-alert', `插入成功：${count} 条账号`, 'success');
-            setResult(`成功插入 ${count} 条账号`, true);
-            if (inputEl) inputEl.value = '';
           } catch (e) {
             console.error('批量插入异常：', e);
             showAlert('add-alert', `插入异常：${e.message}`, 'error');

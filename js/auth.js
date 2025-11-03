@@ -1,6 +1,4 @@
 import { supabase } from './supabase.js';
-// 创建 Supabase 客户端
-const supabase = supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
 
 class AuthService {
     // 用户注册
