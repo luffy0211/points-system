@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Supabase API 测试</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="js/config.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    button {
+      background: #165DFF;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0e4bdf;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Supabase API 连接测试</h1>
+    
+    <div class="mb-4">
+      <h2>配置信息</h2>
+      <p>Supabase URL: <span id="url-display"></span></p>
+      <p>API Key: <span id="key-display"></span></p>
+    </div>
+    
+    <div class="mb-4">
+      <button id="test-button">测试 API 连接</button>
+    </div>
+    
+    <div class="mb-4">
+      <h2>请求详情</h2>
+      <pre id="request-details"></pre>
+    </div>
+    
+    <div class="mb-4">
+      <h2>响应状态</h2>
+      <pre id="response-status"></pre>
+    </div>
+    
+    <div class="mb-4">
+      <h2>响应内容</h2>
+      <pre id="response-content"></pre>
+    </div>
+  </div>
+  
+  <script>
+    // 显示配置信息
+    document.getElementById('url-display').textContent = SUPABASE_CONFIG.url;
+    document.getElementById('key-display').textContent = 
+      SUPABASE_CONFIG.anonKey.substring(0, 10) + '...' + 
+      SUPABASE_CONFIG.anonKey.substring(SUPABASE_CONFIG.anonKey.length - 10);
+    
+    // 测试按钮点击事件
+    document.getElementById('test-button').addEventListener('click', async () => {
+      const requestDetails = document.getElementById('request-details');
+      const responseStatus = document.getElementById('response-status');
+      const responseContent = document.getElementById('response-content');
+      
+      // 清空之前的结果
+      requestDetails.textContent = '正在请求...';
+      responseStatus.textContent = '';
+      responseContent.textContent = '';
+      
+      try {
+        const url = `${SUPABASE_CONFIG.url}/rest/v1/available_accounts_view?order=created_at.desc`;
+        const headers = {
+          'apikey': SUPABASE_CONFIG.anonKey,
+          'Authorization': `Bearer ${localStorage.getItem('supabase.access_token') || ''}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        };
+        
+        // 显示请求详情
+        requestDetails.textContent = JSON.stringify({
+          url: url,
+          headers: {
+            ...headers,
+            'apikey': headers.apikey.substring(0, 10) + '...'
+          }
+        }, null, 2);
+        
+        // 发送请求
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: headers
+        });
+        
+        // 显示响应状态
+        responseStatus.textContent = `Status: ${response.status}\nStatus Text: ${response.statusText}`;
+        
+        // 尝试解析响应内容
+        try {
+          const data = await response.json();
+          responseContent.textContent = JSON.stringify(data, null, 2);
+        } catch (jsonError) {
+          const text = await response.text();
+          responseContent.textContent = `无法解析JSON: ${text}`;
+        }
+        
+      } catch (error) {
+        responseStatus.textContent = `Error: ${error.message}`;
+      }
+    });
+    
+    // 页面加载时自动测试
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('test-button').click();
+      }, 1000);
+    });
+  </script>
+</body>
+</html>

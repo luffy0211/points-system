@@ -362,8 +362,8 @@
           <input type="number" id="min-level" min="1" placeholder="最低等级">
         </div>
         <div class="filter-group">
-          <label for="min-coin">最低哈夫币</label>
-          <input type="number" id="min-coin" min="0" placeholder="最低哈夫币">
+          <label for="min-coin">最低数量</label>
+          <input type="number" id="min-coin" min="0" placeholder="最低数量">
         </div>
         <div class="filter-group">
           <label for="min-stamina">最低体力</label>
@@ -414,8 +414,8 @@
               <span class="detail-value" id="modal-level">--</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">哈夫币数量</span>
-              <span class="detail-value" id="modal-coin">--</span>
+              <span class="detail-label">数量</span>
+          <span class="detail-value" id="modal-coin">--</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">体力等级</span>
@@ -630,7 +630,7 @@
             <h3 class="account-title">${account.account_name}</h3>
             <div class="account-stats">
               <div class="stat-item"><i class="fa fa-level-up"></i> Lv.${account.account_level}</div>
-              <div class="stat-item"><i class="fa fa-diamond"></i> ${account.haf_coin}币</div>
+              <div class="stat-item"><i class="fa fa-diamond"></i> ${account.haf_coin}M</div>
             </div>
             <div class="account-stats">
               <div class="stat-item"><i class="fa fa-bolt"></i> 体力:${account.stamina_level}</div>

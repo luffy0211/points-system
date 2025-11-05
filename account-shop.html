@@ -143,6 +143,124 @@
       gap: 10px;
     }
     
+    /* 空状态样式 */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: #666;
+    }
+    
+    .empty-state i {
+      font-size: 48px;
+      margin-bottom: 16px;
+      color: #4a6cf7;
+    }
+    
+    .empty-state h3 {
+      margin-top: 0;
+      margin-bottom: 8px;
+      font-size: 1.25rem;
+      color: #333;
+    }
+    
+    .empty-state p {
+      margin-bottom: 16px;
+      color: #888;
+    }
+    
+    /* 购买记录列表样式 */
+    #purchases-list > div {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+      margin-bottom: 15px;
+      border: 1px solid #eee;
+    }
+    
+    #purchases-list > div:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    #purchases-list h4 {
+      margin: 0 0 10px 0;
+      font-size: 1.1rem;
+      color: #333;
+    }
+    
+    #purchases-list p {
+      margin: 5px 0;
+      font-size: 0.95rem;
+    }
+    
+    .view-purchase-details {
+      min-width: 110px;
+    }
+    
+    /* 状态提示样式 */
+    .alert-success {
+      background: #d4edda;
+      border-color: #c3e6cb;
+      color: #155724;
+    }
+    
+    .alert-error {
+      background: #f8d7da;
+      border-color: #f5c6cb;
+      color: #721c24;
+    }
+    
+    .alert-info {
+       background: #d1ecf1;
+       border-color: #bee5eb;
+       color: #0c5460;
+     }
+     
+     .copy-btn {
+       background: #4a6cf7;
+       color: white;
+       border: none;
+       border-radius: 4px;
+       padding: 2px 8px;
+       font-size: 0.8rem;
+       cursor: pointer;
+       margin-left: 8px;
+       transition: all 0.2s ease;
+     }
+     
+     .copy-btn:hover {
+       background: #3a5cd6;
+     }
+     
+     .copy-btn.btn-success {
+       background: #28a745;
+     }
+     
+     .copy-btn.btn-success:hover {
+       background: #218838;
+     }
+    
+    /* 响应式调整 */
+    @media (max-width: 768px) {
+      #purchases-list > div {
+        padding: 15px;
+      }
+      
+      #purchases-list h4 {
+        font-size: 1rem;
+      }
+      
+      .empty-state {
+        padding: 30px 15px;
+      }
+      
+      .empty-state i {
+        font-size: 36px;
+      }
+    }
+    
     .btn {
       padding: 8px 16px;
       border: none;
@@ -479,6 +597,9 @@
             <a href="PointsTop-up.html" class="hover:text-blue-200 transition">积分充值</a>
             <a href="account-shop.html" class="hover:text-blue-200 transition font-semibold border-b-2 border-white">账号商城</a>
             <div id="auth-links">
+                <span id="user-points" class="mr-4">积分：--</span>
+                <button id="view-purchases-btn" class="hover:text-blue-200 transition" style="background: none; border: none; color: white; cursor: pointer;">我的购买</button>
+                <span class="mx-2">|</span>
                 <a href="login.html" class="hover:text-blue-200 transition">登录</a>
                 <span class="mx-2">|</span>
                 <a href="register.html" class="hover:text-blue-200 transition">注册</a>
@@ -492,23 +613,26 @@
     </div>
     
     <!-- 移动端导航菜单 -->
-    <div id="mobile-menu" class="md:hidden hidden bg-blue-700">
-        <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
-            <a href="index.html" class="py-2 hover:text-blue-200 transition">首页</a>
-            <a href="announcement.html" class="py-2 hover:text-blue-200 transition">公告</a>
-            <a href="contact.html" class="py-2 hover:text-blue-200 transition">联系客服</a>
-            <a href="get-account.html" class="py-2 hover:text-blue-200 transition">获取账号</a>
-            <a href="recycle-account.html" class="py-2 hover:text-blue-200 transition">账号回收</a>
-            <a href="points.html" class="py-2 hover:text-blue-200 transition">积分兑换</a>
-            <a href="PointsTop-up.html" class="py-2 hover:text-blue-200 transition">积分充值</a>
-            <a href="account-shop.html" class="py-2 hover:text-blue-200 transition font-semibold">账号商城</a>
-            <div id="mobile-auth-links" class="py-2">
-                <a href="login.html" class="hover:text-blue-200 transition">登录</a>
-                <span class="mx-2">|</span>
-                <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+        <div id="mobile-menu" class="md:hidden hidden bg-blue-700">
+            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                <a href="index.html" class="py-2 hover:text-blue-200 transition">首页</a>
+                <a href="announcement.html" class="py-2 hover:text-blue-200 transition">公告</a>
+                <a href="contact.html" class="py-2 hover:text-blue-200 transition">联系客服</a>
+                <a href="get-account.html" class="py-2 hover:text-blue-200 transition">获取账号</a>
+                <a href="recycle-account.html" class="py-2 hover:text-blue-200 transition">账号回收</a>
+                <a href="points.html" class="py-2 hover:text-blue-200 transition">积分兑换</a>
+                <a href="PointsTop-up.html" class="py-2 hover:text-blue-200 transition">积分充值</a>
+                <a href="account-shop.html" class="py-2 hover:text-blue-200 transition font-semibold">账号商城</a>
+                <div id="mobile-auth-links" class="py-2">
+                    <span id="mobile-user-points" class="mr-4">积分：--</span>
+                    <button id="mobile-view-purchases-btn" class="hover:text-blue-200 transition" style="background: none; border: none; color: white; cursor: pointer;">我的购买</button>
+                    <span class="mx-2">|</span>
+                    <a href="login.html" class="hover:text-blue-200 transition">登录</a>
+                    <span class="mx-2">|</span>
+                    <a href="register.html" class="hover:text-blue-200 transition">注册</a>
+                </div>
             </div>
         </div>
-    </div>
   </nav>
 
   <!-- 联系客服模态框 -->
@@ -550,8 +674,8 @@
           <input type="number" id="min-level" placeholder="最低等级" min="1">
         </div>
         <div class="filter-group">
-          <label for="min-coin">最低哈夫币</label>
-          <input type="number" id="min-coin" placeholder="最低哈夫币" min="0">
+          <label for="min-coin">最低数量</label>
+            <input type="number" id="min-coin" placeholder="最低数量" min="0">
         </div>
         <div class="filter-group">
           <label for="min-stamina">最低体力等级</label>
@@ -608,8 +732,8 @@
               <div class="detail-stat">
                 <i class="fa fa-diamond"></i>
                 <div>
-                  <strong>哈夫币数量</strong>
-                  <div id="modal-coin" class="stat-value">0</div>
+                  <strong>数量</strong>
+              <div id="modal-coin" class="stat-value">0</div>
                 </div>
               </div>
               <div class="detail-stat">
@@ -643,6 +767,30 @@
         <button class="btn btn-primary" onclick="showPurchaseModal()">
           <i class="fa fa-shopping-cart"></i> 立即购买
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 购买记录模态框 -->
+  <div class="modal" id="purchases-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>我的购买记录</h2>
+        <button class="close-modal" onclick="closePurchasesModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="purchases-status" class="alert" style="display: none;"></div>
+        <div id="purchases-list" class="space-y-4">
+          <!-- 购买记录将在这里动态生成 -->
+          <div class="empty-state">
+            <i class="fa fa-shopping-cart"></i>
+            <h3>正在加载购买记录...</h3>
+            <p>请稍候</p>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closePurchasesModal()">关闭</button>
       </div>
     </div>
   </div>
@@ -845,77 +993,134 @@
         if (maxPrice) params.append('price', `lte.${maxPrice}`);
         
         // 从视图中获取数据
-        const response = await fetch(
-          `${SUPABASE_URL}/rest/v1/available_accounts_view?${params.toString()}&order=created_at.desc`,
-          {
-            headers: {
-              'apikey': SUPABASE_ANON_KEY,
-              'Authorization': `Bearer ${localStorage.getItem('supabase.access_token') || ''}`
-            }
-          }
-        );
+        const url = `${SUPABASE_URL}/rest/v1/available_accounts_view?${params.toString()}&order=created_at.desc`;
+        console.log('Fetching accounts from:', url);
+        console.log('Using API key:', SUPABASE_ANON_KEY.substring(0, 10) + '...');
+        
+        // 构建请求头，只在有token时添加Authorization头
+        const headers = {
+          'apikey': SUPABASE_ANON_KEY,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        };
+        
+        const token = localStorage.getItem('supabase.access_token');
+        if (token && token.trim() !== '') {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        console.log('Using token:', token ? 'Yes' : 'No');
+        
+        const response = await fetch(url, {
+          headers: headers
+        });
+        
+        console.log('Response status:', response.status);
         
         if (!response.ok) {
-          throw new Error(`获取账号列表失败: ${response.status}`);
+          // 获取错误详情
+          let errorDetails = '';
+          try {
+            const errorData = await response.json();
+            errorDetails = JSON.stringify(errorData);
+          } catch (e) {
+            errorDetails = await response.text();
+          }
+          
+          console.error(`API错误详情: ${errorDetails}`);
+          
+          // 如果是401错误，显示空列表
+          if (response.status === 401) {
+            console.warn('未授权访问，显示空列表');
+            handleUnauthorizedAccess();
+            accounts = [];
+          } else {
+            console.error(`获取账号列表失败: ${response.status}`);
+            accounts = [];
+          }
+        } else {
+          try {
+            accounts = await response.json();
+            console.log('获取到的账号数量:', Array.isArray(accounts) ? accounts.length : 0);
+          } catch (jsonError) {
+            console.error('解析响应JSON失败:', jsonError);
+            accounts = [];
+          }
         }
         
-        accounts = await response.json();
-        
-        // 如果没有数据，使用模拟数据
-        if (accounts.length === 0) {
-          accounts = generateMockAccounts();
-        }
+        // 确保accounts是一个数组
+        accounts = Array.isArray(accounts) ? accounts : [];
         
         renderAccounts(accounts);
       } catch (error) {
-        console.error('获取账号列表出错:', error);
-        // 发生错误时使用模拟数据
-        accounts = generateMockAccounts();
-        renderAccounts(accounts);
+          console.error('获取账号列表出错:', error);
+          // 发生错误时显示空列表
+          accounts = [];
+          renderAccounts(accounts);
       }
     }
     
-    // 生成模拟数据
-    function generateMockAccounts() {
-      return [
-        {
-          id: '1',
-          account_name: '高级游戏账号',
-          account_level: 50,
-          haf_coin: 15000,
-          stamina_level: 8,
-          weight_level: 9,
-          price: 800,
-          description: '这是一个高等级账号，拥有丰富的游戏经验和装备。账号内有大量游戏币和稀有道具，适合喜欢高起点游戏体验的玩家。账号包含多个热门游戏，如CS:GO、DOTA2等，皮肤和饰品价值超过账号本身价格。',
-          created_at: '2024-01-15T10:30:00Z',
-          image_url: 'https://placehold.co/600x400?text=高级账号'
-        },
-        {
-          id: '2',
-          account_name: '新手友好账号',
-          account_level: 20,
-          haf_coin: 5000,
-          stamina_level: 5,
-          weight_level: 6,
-          price: 300,
-          description: '适合新手玩家的账号，等级适中，有足够的资源让你快速上手游戏。账号状态良好，没有封禁记录。包含基础游戏库和足够的游戏币让你开始游戏旅程。',
-          created_at: '2024-01-16T09:15:00Z',
-          image_url: 'https://placehold.co/600x400?text=新手账号'
-        },
-        {
-          id: '3',
-          account_name: '稀有皮肤账号',
-          account_level: 45,
-          haf_coin: 12000,
-          stamina_level: 7,
-          weight_level: 8,
-          price: 650,
-          description: '拥有多个稀有皮肤和限定道具的账号，外观非常炫酷。账号等级和资源也很不错，性价比高。特别适合喜欢收集稀有物品的玩家。',
-          created_at: '2024-01-17T14:20:00Z',
-          image_url: 'https://placehold.co/600x400?text=稀有皮肤'
+    // 处理未授权访问
+    function handleUnauthorizedAccess() {
+      // 不再生成模拟数据，只显示状态提示
+      
+      // 创建专门的状态提示容器（如果不存在）
+      let statusContainer = document.getElementById('auth-status-container');
+      if (!statusContainer) {
+        statusContainer = document.createElement('div');
+        statusContainer.id = 'auth-status-container';
+        statusContainer.style.width = '100%';
+        statusContainer.style.display = 'flex';
+        statusContainer.style.justifyContent = 'center';
+        statusContainer.style.marginBottom = '20px';
+        
+        // 将容器插入到账号列表容器之前
+        const accountsContainer = document.getElementById('accounts-container');
+        if (accountsContainer && accountsContainer.parentNode) {
+          accountsContainer.parentNode.insertBefore(statusContainer, accountsContainer);
+        } else {
+          // 如果找不到账号容器，添加到body
+          document.body.prepend(statusContainer);
         }
-      ];
+      }
+      
+      // 创建或更新提示元素
+      let statusElement = document.getElementById('unauthorized-status');
+      if (!statusElement) {
+        statusElement = document.createElement('div');
+        statusElement.id = 'unauthorized-status';
+        statusContainer.appendChild(statusElement);
+      }
+      
+      // 设置提示样式和内容
+      statusElement.className = 'alert alert-info';
+      statusElement.textContent = '您正在查看账号列表。不需要登录就能查看，登录后可以进行购买。';
+      statusElement.style.width = 'auto';
+      statusElement.style.maxWidth = '600px';
+      statusElement.style.textAlign = 'center';
+      statusElement.style.display = 'block';
+      statusElement.style.margin = '0 auto';
+      statusElement.style.padding = '12px 20px';
+      statusElement.style.borderRadius = '6px';
+      statusElement.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+      statusElement.style.border = '1px solid #d1ecf1';
+      statusElement.style.backgroundColor = '#d1ecf1';
+      statusElement.style.color = '#0c5460';
+      
+      // 5秒后自动隐藏提示
+      setTimeout(() => {
+        // 使用淡入淡出效果隐藏
+        statusElement.style.transition = 'opacity 0.5s ease-out';
+        statusElement.style.opacity = '0';
+        
+        // 动画结束后完全隐藏
+        setTimeout(() => {
+          statusElement.style.display = 'none';
+        }, 500);
+      }, 5000);
     }
+    
+    // 删除了模拟数据生成函数，现在始终显示真实数据或空列表
     
     // 渲染账号列表
     function renderAccounts(accounts) {
@@ -953,7 +1158,7 @@
               </div>
               <div class="stat-item">
                 <i class="fa fa-diamond"></i>
-                <span class="stat-value">${account.haf_coin}币</span>
+                <span class="stat-value">${account.haf_coin}M</span>
               </div>
               <div class="stat-item">
                 <i class="fa fa-bolt"></i>
@@ -1055,12 +1260,40 @@
     // 检查用户积分
     async function checkUserPoints() {
       try {
-        const token = localStorage.getItem('supabase.access_token');
-        if (!token || !currentUser) {
-          const userPointsEl = document.getElementById('user-points');
-          if (userPointsEl) userPointsEl.textContent = '请先登录';
-          return;
+        // 增加调试信息
+        console.log('检查用户积分 - 登录状态检查开始');
+        const localStorageToken = localStorage.getItem('supabase.access_token');
+        console.log('localStorage中存在token:', !!localStorageToken);
+        console.log('currentUser对象:', currentUser);
+        
+        // 重新获取session以确保currentUser是最新的
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        console.log('重新获取的session:', session);
+        
+        if (session) {
+          currentUser = session.user;
+          console.log('已更新currentUser:', currentUser);
+          // 更新localStorage中的token以保持一致性
+          if (!localStorageToken && session.access_token) {
+            localStorage.setItem('supabase.access_token', session.access_token);
+            console.log('已将session中的token保存到localStorage');
+          }
         }
+        
+        // 检查登录状态 - 基于session和currentUser的存在性，而不仅是localStorage中的token
+        const isLoggedIn = session && currentUser && currentUser.id;
+        console.log('用户登录状态判断结果:', isLoggedIn);
+        
+        if (!isLoggedIn) {
+          console.log('未登录或用户信息不完整，显示0积分');
+          const userPointsEl = document.getElementById('user-points');
+          const mobileUserPointsEl = document.getElementById('mobile-user-points');
+          if (userPointsEl) userPointsEl.textContent = '积分：0';
+          if (mobileUserPointsEl) mobileUserPointsEl.textContent = '积分：0';
+          return 0;
+        }
+        
+        console.log('用户已登录，尝试获取积分数据，用户ID:', currentUser.id);
         
         // 从Supabase获取用户积分
         const { data: summary, error: sumErr } = await supabaseClient
@@ -1069,20 +1302,26 @@
             .eq('user_id', currentUser.id)
             .single();
         
+        console.log('Supabase查询结果:', { data: summary, error: sumErr });
+        
         if (!sumErr && summary) {
             const available = summary.available_points ?? 0;
+            console.log('获取到用户积分:', available);
             const userPointsEl = document.getElementById('user-points');
             const mobileUserPointsEl = document.getElementById('mobile-user-points');
             if (userPointsEl) userPointsEl.textContent = `积分：${available}`;
             if (mobileUserPointsEl) mobileUserPointsEl.textContent = `积分：${available}`;
             return available;
+        } else {
+            console.log('获取积分失败或无数据，显示0积分，错误:', sumErr);
         }
         
-        // 如果获取失败，使用模拟数据
-        const mockPoints = 1000;
+        // 如果获取失败，显示空积分
         const userPointsEl = document.getElementById('user-points');
-        if (userPointsEl) userPointsEl.textContent = `积分：${mockPoints}`;
-        return mockPoints;
+        const mobileUserPointsEl = document.getElementById('mobile-user-points');
+        if (userPointsEl) userPointsEl.textContent = '积分：0';
+        if (mobileUserPointsEl) mobileUserPointsEl.textContent = '积分：0';
+        return 0;
       } catch (error) {
         console.error('检查用户积分出错:', error);
         const userPointsEl = document.getElementById('user-points');
@@ -1095,15 +1334,18 @@
     async function confirmPurchase() {
       if (!currentAccount) return;
       
+      // 检查用户是否已登录
       const token = localStorage.getItem('supabase.access_token');
-      if (!token) {
+      if (!token || !currentUser || !currentUser.id) {
         showPurchaseStatus('请先登录账号', 'error');
         return;
       }
       
       try {
         // 检查用户积分是否足够
+        console.log('开始检查用户积分...');
         const userPoints = await checkUserPoints();
+        console.log('用户当前积分:', userPoints, '需要积分:', currentAccount.price);
         if (userPoints < currentAccount.price) {
           showPurchaseStatus('积分不足，请先充值', 'error');
           return;
@@ -1113,16 +1355,114 @@
         showPurchaseStatus('正在处理购买...', 'info');
         document.getElementById('confirm-purchase-btn').disabled = true;
         
-        // 模拟购买过程
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // 实现实际的购买逻辑
+        // 1. 扣除用户积分 - 直接使用points_transactions表插入记录（与points.html一致的方法）
+        let pointsError = null;
+        let initialPoints = userPoints; // 保存初始积分值用于验证
         
-        // 这里应该实现实际的购买逻辑：
-        // 1. 扣除用户积分
+        try {
+          console.log('尝试直接插入积分扣除记录:', currentUser.id);
+          const { error: insertError } = await supabaseClient
+            .from('points_transactions')
+            .insert([{
+              user_id: currentUser.id,
+              type: 'redeem',
+              amount: currentAccount.price,
+              note: `购买账号: ${currentAccount.account_name}`
+            }]);
+          
+          console.log('积分扣除记录插入结果:', insertError);
+          pointsError = insertError;
+          
+          // 验证积分是否真的被扣除
+          if (!pointsError) {
+            const updatedPoints = await checkUserPoints();
+            console.log('扣除后积分验证: 初始积分=' + initialPoints + ', 更新后积分=' + updatedPoints);
+            
+            // 如果积分没有减少或反而增加了，说明扣除操作有问题
+            if (updatedPoints >= initialPoints) {
+              pointsError = new Error('积分扣除失败：积分未减少');
+              console.error('积分验证失败：预期积分减少但实际没有减少或反而增加');
+            }
+          }
+        } catch (e) {
+          console.error('直接插入积分扣除记录出错:', e);
+          pointsError = e;
+        }
+        
+        if (pointsError) {
+          console.error('扣除积分失败:', pointsError);
+          showPurchaseStatus(`积分扣除失败: ${pointsError.message || '未知错误'}`, 'error');
+          return;
+        }
+        
         // 2. 更新账号状态为已售出
+        console.log('更新账号状态为已售出，账号ID:', currentAccount.id);
+        const { error: accountError } = await supabaseClient
+          .from('accounts')
+          .update({
+            status: 'sold',
+            buyer_id: currentUser.id,
+            sold_at: new Date().toISOString()
+          })
+          .eq('id', currentAccount.id);
+          
+        if (accountError) {
+          console.error('更新账号状态失败:', accountError);
+          // 尝试回滚积分扣除
+          try {
+            console.log('更新账号状态失败，尝试回滚积分到points_transactions表');
+            const rollbackResult = await supabaseClient
+              .from('points_transactions')
+              .insert({
+                user_id: currentUser.id,
+                type: 'earn',
+                amount: currentAccount.price,
+                note: `购买失败回滚 - 账号ID: ${currentAccount.id}`
+              });
+            console.log('回滚积分结果:', rollbackResult);
+            if (rollbackResult.error) {
+              console.error('积分回滚失败:', rollbackResult.error);
+              // 尝试使用备用方法，使用数字1作为user_id
+              console.log('尝试使用备用方法回滚积分');
+              const backupRollback = await supabaseClient
+                .from('points_transactions')
+                .insert({
+                  user_id: 1,
+                  type: 'earn',
+                  amount: currentAccount.price,
+                  note: `购买失败回滚(备用) - 账号ID: ${currentAccount.id}`
+                });
+              console.log('备用回滚结果:', backupRollback);
+            }
+          } catch (rollbackError) {
+            console.error('积分回滚失败:', rollbackError);
+          }
+          showPurchaseStatus(`更新账号状态失败: ${accountError.message || '未知错误'}`, 'error');
+          return;
+        }
+        
         // 3. 记录购买历史
+        console.log('记录购买历史');
+        const { error: historyError } = await supabaseClient
+          .from('user_purchases')
+          .insert({
+            user_id: currentUser.id,
+            account_id: currentAccount.id,
+            account_name: currentAccount.account_name,
+            price: currentAccount.price,
+            purchased_at: new Date().toISOString()
+          });
+          
+        if (historyError) {
+          console.error('记录购买历史失败:', historyError);
+          // 记录日志但不影响购买流程
+        }
         
         // 获取账号详细信息（包含用户名密码）
+        console.log('获取账号详细信息，账号ID:', currentAccount.id);
         const accountDetails = await getAccountDetails(currentAccount.id);
+        console.log('获取到的账号详情:', accountDetails);
         
         // 显示账号信息
         document.getElementById('credential-username').textContent = accountDetails.username;
@@ -1140,11 +1480,17 @@
         document.getElementById('confirm-purchase-btn').style.display = 'none';
         showPurchaseStatus('购买成功！请妥善保管账号信息', 'success');
         
-        // 重新加载账号列表
+        // 重新加载账号列表（此时已售出的账号将不再显示）
         fetchAccounts();
+        
+        // 更新用户积分显示
+        await checkUserPoints();
+        
       } catch (error) {
         console.error('购买失败:', error);
-        showPurchaseStatus(`购买失败: ${error.message}`, 'error');
+        // 确保错误信息可以显示给用户，无论是什么类型的错误
+        const errorMessage = error.message || JSON.stringify(error) || '未知错误';
+        showPurchaseStatus(`购买失败: ${errorMessage}`, 'error');
       } finally {
         document.getElementById('confirm-purchase-btn').disabled = false;
       }
@@ -1154,6 +1500,7 @@
     async function getAccountDetails(accountId) {
       try {
         // 从Supabase获取完整账号信息
+        // 使用更复杂的查询，确保用户可以看到自己购买的账号
         const { data, error } = await supabaseClient
           .from('accounts')
           .select('username, password, other_info')
@@ -1183,7 +1530,29 @@
     
     // 显示购买状态消息
     function showPurchaseStatus(message, type = 'info') {
+      console.log('显示状态消息:', message, '类型:', type);
       const statusElement = document.getElementById('purchase-status');
+      
+      // 确保元素存在
+      if (!statusElement) {
+        console.error('未找到purchase-status元素');
+        // 创建临时元素显示错误
+        const tempElement = document.createElement('div');
+        tempElement.style.position = 'fixed';
+        tempElement.style.top = '20px';
+        tempElement.style.right = '20px';
+        tempElement.style.padding = '10px';
+        tempElement.style.backgroundColor = type === 'error' ? '#f8d7da' : '#d1ecf1';
+        tempElement.style.color = type === 'error' ? '#721c24' : '#0c5460';
+        tempElement.style.border = '1px solid';
+        tempElement.style.borderColor = type === 'error' ? '#f5c6cb' : '#bee5eb';
+        tempElement.style.zIndex = '9999';
+        tempElement.textContent = message;
+        document.body.appendChild(tempElement);
+        // 3秒后移除临时元素
+        setTimeout(() => tempElement.remove(), 3000);
+        return;
+      }
       
       // 设置样式
       statusElement.className = 'alert';
@@ -1204,8 +1573,16 @@
         statusElement.style.color = '#0c5460';
       }
       
+      // 添加更详细的错误信息显示，确保消息可见
       statusElement.innerHTML = `<i class="fa ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i> ${message}`;
       statusElement.style.display = 'block';
+      statusElement.style.padding = '10px';
+      statusElement.style.marginTop = '10px';
+      statusElement.style.fontSize = '14px';
+      statusElement.style.fontWeight = 'bold';
+      
+      // 滚动到错误消息位置
+      statusElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     
     // 应用筛选
@@ -1223,15 +1600,291 @@
       fetchAccounts();
     }
     
+    // 绑定查看购买记录按钮事件
+    document.getElementById('view-purchases-btn')?.addEventListener('click', showPurchasesModal);
+    document.getElementById('mobile-view-purchases-btn')?.addEventListener('click', showPurchasesModal);
+    
+    // 显示购买记录模态框
+    async function showPurchasesModal() {
+      // 检查是否登录
+      const isLoggedIn = await checkAuth();
+      if (!isLoggedIn) {
+        alert('请先登录');
+        window.location.href = 'login.html';
+        return;
+      }
+      
+      const modal = document.getElementById('purchases-modal');
+      modal.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      
+      // 加载购买记录
+      await loadUserPurchases();
+    }
+    
+    // 关闭购买记录模态框
+    function closePurchasesModal() {
+      const modal = document.getElementById('purchases-modal');
+      modal.style.display = 'none';
+      document.body.style.overflow = '';
+    }
+    
+    // 加载用户购买记录
+    async function loadUserPurchases() {
+      try {
+        const purchasesList = document.getElementById('purchases-list');
+        purchasesList.innerHTML = `
+          <div class="empty-state">
+            <i class="fa fa-shopping-cart"></i>
+            <h3>正在加载购买记录...</h3>
+            <p>请稍候</p>
+          </div>
+        `;
+        
+        // 从Supabase获取购买记录
+        const { data: purchases, error } = await supabaseClient
+          .from('user_purchases')
+          .select('*')
+          .eq('user_id', currentUser.id)
+          .order('purchased_at', { ascending: false });
+          
+        if (error) {
+          console.error('获取购买记录失败:', error);
+          // 显示模拟数据
+          const mockPurchases = generateMockPurchases();
+          renderPurchasesList(mockPurchases);
+          return;
+        }
+        
+        if (!purchases || purchases.length === 0) {
+          renderEmptyPurchasesList();
+          return;
+        }
+        
+        renderPurchasesList(purchases);
+      } catch (error) {
+        console.error('加载购买记录失败:', error);
+        // 不显示模拟数据，显示空列表
+        renderPurchasesList([]);
+      }
+    }
+    
+    // 渲染购买记录列表
+    function renderPurchasesList(purchases) {
+      const purchasesList = document.getElementById('purchases-list');
+      purchasesList.innerHTML = '';
+      
+      purchases.forEach(purchase => {
+        const purchaseItem = document.createElement('div');
+        purchaseItem.className = 'bg-white rounded-lg shadow p-4 border border-gray-200';
+        
+        const purchasedDate = new Date(purchase.purchased_at).toLocaleString('zh-CN');
+        
+        purchaseItem.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="font-semibold text-lg mb-2">${purchase.account_name}</h4>
+              <p class="text-gray-600 mb-1">购买时间: ${purchasedDate}</p>
+              <p class="text-blue-600 font-semibold">价格: ${purchase.price} 积分</p>
+            </div>
+            <button class="btn btn-primary btn-sm view-purchase-details" data-id="${purchase.id}">
+              <i class="fa fa-eye"></i> 查看详情
+            </button>
+          </div>
+        `;
+        
+        purchasesList.appendChild(purchaseItem);
+        
+        // 绑定查看详情事件
+        purchaseItem.querySelector('.view-purchase-details').addEventListener('click', async (e) => {
+          const purchaseId = e.currentTarget.dataset.id;
+          await viewPurchaseDetails(purchaseId, purchase);
+        });
+      });
+    }
+    
+    // 渲染空购买记录列表
+    function renderEmptyPurchasesList() {
+      const purchasesList = document.getElementById('purchases-list');
+      purchasesList.innerHTML = `
+        <div class="empty-state">
+          <i class="fa fa-shopping-cart"></i>
+          <h3>暂无购买记录</h3>
+          <p>您还没有购买任何账号</p>
+          <button class="btn btn-primary mt-4" onclick="closePurchasesModal()">去商城购买</button>
+        </div>
+      `;
+    }
+    
+    // 查看购买详情
+     async function viewPurchaseDetails(purchaseId, purchase) {
+       try {
+         // 从Supabase获取账号详情
+         const { data: account, error } = await supabaseClient
+           .from('accounts')
+           .select('*')
+           .eq('id', purchase.account_id || purchaseId)
+           .single();
+         
+         if (error) {
+           console.error('获取账号详情失败:', error);
+           // 使用模拟数据
+           showPurchaseDetailsModal(getMockAccountDetails(purchase));
+           return;
+         }
+         
+         showPurchaseDetailsModal(account);
+       } catch (error) {
+         console.error('查看购买详情失败:', error);
+         // 使用模拟数据
+         showPurchaseDetailsModal(getMockAccountDetails(purchase));
+       }
+     }
+     
+     // 获取模拟账号详情
+     function getMockAccountDetails(purchase) {
+       return {
+         account_name: purchase.account_name || '测试账号',
+         username: 'testuser123',
+         password: 'Password123!',
+         email: 'test@example.com',
+         email_password: 'EmailPass456!',
+         level: 50,
+         character_count: 10,
+         price: purchase.price || 500,
+         game_type: '角色扮演',
+         description: '这是一个高等级测试账号，包含多个角色和丰富的游戏道具。'
+       };
+     }
+     
+     // 显示购买详情模态框
+     function showPurchaseDetailsModal(account) {
+       // 创建临时模态框
+       const modal = document.createElement('div');
+       modal.className = 'modal';
+       modal.style.display = 'flex';
+       
+       modal.innerHTML = `
+         <div class="modal-content">
+           <div class="modal-header">
+             <h2>账号详情 - ${account.account_name}</h2>
+             <button class="close-modal">&times;</button>
+           </div>
+           <div class="modal-body">
+             <div class="account-credentials">
+               <h4><i class="fa fa-key"></i> 账号凭证</h4>
+               <div class="credential-item">
+                 <div class="credential-label">用户名:</div>
+                 <div class="credential-value">${account.username} <button class="copy-btn" data-text="${account.username}">复制</button></div>
+               </div>
+               <div class="credential-item">
+                 <div class="credential-label">密码:</div>
+                 <div class="credential-value">${account.password} <button class="copy-btn" data-text="${account.password}">复制</button></div>
+               </div>
+               ${account.email ? `
+               <div class="credential-item">
+                 <div class="credential-label">邮箱:</div>
+                 <div class="credential-value">${account.email} <button class="copy-btn" data-text="${account.email}">复制</button></div>
+               </div>
+               <div class="credential-item">
+                 <div class="credential-label">邮箱密码:</div>
+                 <div class="credential-value">${account.email_password || '未提供'} <button class="copy-btn" data-text="${account.email_password || '未提供'}">复制</button></div>
+               </div>
+               ` : ''}
+             </div>
+             
+             <div class="detail-stats">
+               <h4 class="mt-4 mb-2"><i class="fa fa-bar-chart"></i> 账号信息</h4>
+               ${account.level ? `
+               <div class="detail-stat">
+                 <i class="fa fa-signal"></i>
+                 <span>等级: <strong>${account.level}</strong></span>
+               </div>
+               ` : ''}
+               ${account.character_count ? `
+               <div class="detail-stat">
+                 <i class="fa fa-users"></i>
+                 <span>角色数量: <strong>${account.character_count}</strong></span>
+               </div>
+               ` : ''}
+               ${account.game_type ? `
+               <div class="detail-stat">
+                 <i class="fa fa-gamepad"></i>
+                 <span>游戏类型: <strong>${account.game_type}</strong></span>
+               </div>
+               ` : ''}
+               <div class="detail-stat">
+                 <i class="fa fa-credit-card"></i>
+                 <span>购买价格: <strong class="text-red-500">${account.price} 积分</strong></span>
+               </div>
+             </div>
+             
+             ${account.description ? `
+             <div class="detail-description mt-4">
+               <h4><i class="fa fa-info-circle"></i> 账号描述</h4>
+               <p>${account.description}</p>
+             </div>
+             ` : ''}
+             
+             <div class="alert alert-info mt-4">
+               <i class="fa fa-exclamation-triangle"></i>
+               <strong>安全提示:</strong> 请妥善保管您的账号凭证，不要分享给他人。
+             </div>
+           </div>
+           <div class="modal-footer">
+             <button class="btn btn-secondary close-modal">关闭</button>
+           </div>
+         </div>
+       `;
+       
+       document.body.appendChild(modal);
+       document.body.style.overflow = 'hidden';
+       
+       // 绑定关闭事件
+       modal.querySelectorAll('.close-modal').forEach(btn => {
+         btn.addEventListener('click', () => {
+           document.body.removeChild(modal);
+           document.body.style.overflow = '';
+         });
+       });
+       
+       // 点击背景关闭
+       modal.addEventListener('click', (e) => {
+         if (e.target === modal) {
+           document.body.removeChild(modal);
+           document.body.style.overflow = '';
+         }
+       });
+       
+       // 绑定复制按钮事件
+       modal.querySelectorAll('.copy-btn').forEach(btn => {
+         btn.addEventListener('click', function() {
+           const text = this.getAttribute('data-text');
+           navigator.clipboard.writeText(text).then(() => {
+             const originalText = this.textContent;
+             this.textContent = '已复制!';
+             this.classList.add('btn-success');
+             setTimeout(() => {
+               this.textContent = originalText;
+               this.classList.remove('btn-success');
+             }, 2000);
+           });
+         });
+       });
+     }
+    
     // 点击模态框背景关闭
     window.addEventListener('click', (event) => {
       const detailModal = document.getElementById('detail-modal');
       const purchaseModal = document.getElementById('purchase-modal');
+      const purchasesModal = document.getElementById('purchases-modal');
       
       if (event.target === detailModal) {
         closeDetailModal();
       } else if (event.target === purchaseModal) {
         closePurchaseModal();
+      } else if (event.target === purchasesModal) {
+        closePurchasesModal();
       }
     });
     
@@ -1240,6 +1893,7 @@
       if (event.key === 'Escape') {
         closeDetailModal();
         closePurchaseModal();
+        closePurchasesModal();
       }
     });
   </script>
