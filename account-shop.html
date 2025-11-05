@@ -968,12 +968,6 @@
         }
     }
     
-    // 用户登出
-    function logout() {
-      localStorage.removeItem('supabase.access_token');
-      location.reload();
-    }
-    
     // 获取账号列表
     async function fetchAccounts() {
       try {
@@ -1004,7 +998,29 @@
           'Accept': 'application/json'
         };
         
-        const token = localStorage.getItem('supabase.access_token');
+        let token = localStorage.getItem('supabase.access_token');
+        
+        // 尝试确保token是有效的
+        if (token && token.trim() !== '') {
+          try {
+            // 尝试获取最新的session以验证token有效性
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session && session.access_token) {
+              token = session.access_token;
+              // 更新localStorage中的token
+              localStorage.setItem('supabase.access_token', token);
+            } else {
+              // 如果session无效，清除过期的token
+              localStorage.removeItem('supabase.access_token');
+              token = null;
+              console.log('已清除过期的token');
+            }
+          } catch (e) {
+            console.warn('获取session失败，可能网络问题或token已过期:', e);
+          }
+        }
+        
+        // 如果还有有效的token，添加到请求头
         if (token && token.trim() !== '') {
           headers['Authorization'] = `Bearer ${token}`;
         }
@@ -1032,7 +1048,7 @@
           // 如果是401错误，显示空列表
           if (response.status === 401) {
             console.warn('未授权访问，显示空列表');
-            handleUnauthorizedAccess();
+            await handleUnauthorizedAccess();
             accounts = [];
           } else {
             console.error(`获取账号列表失败: ${response.status}`);
@@ -1061,8 +1077,18 @@
     }
     
     // 处理未授权访问
-    function handleUnauthorizedAccess() {
-      // 不再生成模拟数据，只显示状态提示
+    async function handleUnauthorizedAccess() {
+      // 清除过期的token
+      const token = localStorage.getItem('supabase.access_token');
+      if (token) {
+        localStorage.removeItem('supabase.access_token');
+        console.log('已清除过期的token');
+        
+        // 尝试清除currentUser
+        if (window.currentUser) {
+          window.currentUser = null;
+        }
+      }
       
       // 创建专门的状态提示容器（如果不存在）
       let statusContainer = document.getElementById('auth-status-container');
@@ -1104,6 +1130,9 @@
       statusElement.style.borderRadius = '6px';
       statusElement.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
       statusElement.style.border = '1px solid #d1ecf1';
+      
+      // 更新用户积分显示为未登录状态
+      await checkUserPoints();
       statusElement.style.backgroundColor = '#d1ecf1';
       statusElement.style.color = '#0c5460';
       
@@ -1128,13 +1157,41 @@
       grid.innerHTML = '';
       
       if (accounts.length === 0) {
-        grid.innerHTML = `
-          <div class="empty-state">
-            <i class="fa fa-search"></i>
-            <h3>没有找到符合条件的账号</h3>
-            <p>请尝试调整筛选条件</p>
-          </div>
-        `;
+        // 检查是否有筛选条件被设置
+        const hasActiveFilters = document.getElementById('min-level').value ||
+                                 document.getElementById('min-coin').value ||
+                                 document.getElementById('min-stamina').value ||
+                                 document.getElementById('min-weight').value ||
+                                 document.getElementById('max-price').value;
+        
+        let emptyStateContent = '';
+        if (hasActiveFilters) {
+          // 有筛选条件时的提示
+          emptyStateContent = `
+            <div class="empty-state">
+              <i class="fa fa-search"></i>
+              <h3>没有找到符合条件的账号</h3>
+              <p>请尝试调整筛选条件</p>
+              <button class="btn btn-secondary mt-4" onclick="resetFilters()">
+                <i class="fa fa-refresh"></i> 重置筛选条件
+              </button>
+            </div>
+          `;
+        } else {
+          // 没有筛选条件时的提示（可能是账号已售罄）
+          emptyStateContent = `
+            <div class="empty-state">
+              <i class="fa fa-shopping-bag"></i>
+              <h3>商城暂时没有可售账号</h3>
+              <p>账号可能已经全部售罄，请稍后再来查看</p>
+              <button class="btn btn-primary mt-4" onclick="window.location.reload()">
+                <i class="fa fa-refresh"></i> 刷新页面
+              </button>
+            </div>
+          `;
+        }
+        
+        grid.innerHTML = emptyStateContent;
         return;
       }
       
