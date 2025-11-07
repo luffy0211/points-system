@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>账号商城 - LEAL账号报单系统</title>
+    <!-- 注意：在生产环境中应避免使用CDN版本的Tailwind CSS -->
+    <!-- 生产环境应通过PostCSS或Tailwind CLI安装和构建 -->
+    <!-- 仅在开发测试环境使用此CDN -->
+    <script src="https://cdn.tailwindcss.com" data-dev-only="true"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 优先使用本地Supabase库 -->
+    <script src="supabase.min.js"></script>
+    <!-- 备用CDN链接 -->
+    <script>
+        if (typeof supabase === 'undefined') {
+            console.warn('本地Supabase库加载失败，尝试加载CDN版本');
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js';
+            script.onload = function() {
+                console.log('CDN版Supabase库加载成功');
+            };
+            script.onerror = function() {
+                console.error('Supabase库加载失败：本地和CDN版本都无法使用');
+            };
+            document.head.appendChild(script);
+        }
+    </script>
+    <style>
+        @tailwind base;
+        @tailwind components;
+        @tailwind utilities;
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            padding-top: 50px; /* 为顶部状态栏留出空间 */
+        }
+        
+        /* Supabase连接状态样式 */
+        .supabase-status {
+            color: white;
+            font-weight: bold;
+            transition: background-color 0.3s ease;
+        }
+        
+        .supabase-status.connected {
+            background-color: #4CAF50;
+        }
+        
+        .supabase-status.disconnected {
+            background-color: #f44336;
+        }
+
+        .navbar {
+            background-color: #1e40af;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .account-card {
+            transition: all 0.3s ease;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .account-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .card-image img {
+            height: 200px;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .account-card:hover .card-image img {
+            transform: scale(1.05);
+        }
+
+        .filter-container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .modal-header {
+            background-color: #1e40af;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .btn-primary {
+            background-color: #1e40af;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #1e3a8a;
+        }
+
+        .btn-secondary {
+            background-color: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #4b5563;
+        }
+
+        .btn-success {
+            background-color: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #059669;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: #f9fafb;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .stat-item i {
+            color: #1e40af;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .form-input {
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 8px 12px;
+            width: 100%;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #1e40af;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-blue {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-green {
+            background-color: #d1fae5;
+            color: #059669;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 16px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 500;
+            z-index: 9999;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .toast-success {
+            background-color: #10b981;
+        }
+
+        .toast-error {
+            background-color: #ef4444;
+        }
+
+        .toast-info {
+            background-color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar py-3 px-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <a href="#" class="text-xl font-bold text-white">LEAL账号报单系统</a>
+            
+            <!-- 桌面导航 -->
+            <div class="hidden md:flex space-x-6">
+                <a href="#" class="hover:text-blue-200 transition text-white">公告</a>
+                <a href="#" class="hover:text-blue-200 transition text-white">联系客服</a>
+                <a href="#" class="hover:text-blue-200 transition text-white font-semibold border-b-2 border-white">账号商城</a>
+                <div id="desktop-auth-section" class="flex items-center space-x-4">
+                    <span id="login-status" class="text-white hidden">已登录: <span id="current-user">未登录</span></span>
+                    <button id="login-btn" class="btn btn-secondary">
+                        <i class="fa fa-user mr-1"></i> 登录
+                    </button>
+                    <button id="publish-account-btn" class="btn btn-success hidden">
+                        <i class="fa fa-upload mr-1"></i> 发布账号
+                    </button>
+                    <button id="logout-btn" class="btn btn-secondary hidden">
+                        <i class="fa fa-sign-out mr-1"></i> 登出
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 移动端菜单按钮 -->
+            <button id="mobile-menu-button" class="md:hidden text-white focus:outline-none">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+        </div>
+        
+        <!-- 移动端导航菜单 -->
+            <div id="mobile-menu" class="md:hidden hidden bg-blue-800">
+                <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
+                    <a href="#" class="py-2 hover:text-blue-200 transition text-white">首页</a>
+                    <a href="#" class="py-2 hover:text-blue-200 transition text-white">公告</a>
+                    <a href="#" class="py-2 hover:text-blue-200 transition text-white">联系客服</a>
+                    <a href="#" class="py-2 hover:text-blue-200 transition text-white font-semibold">账号商城</a>
+                    <div id="mobile-auth-section" class="flex flex-col space-y-2">
+                        <span id="mobile-login-status" class="text-white hidden py-2">已登录: <span id="mobile-current-user">未登录</span></span>
+                        <button id="mobile-login-btn" class="btn btn-secondary py-2">
+                            <i class="fa fa-user mr-1"></i> 登录
+                        </button>
+                        <button id="mobile-publish-btn" class="btn btn-success py-2 hidden">
+                            <i class="fa fa-upload mr-1"></i> 发布账号
+                        </button>
+                        <button id="mobile-logout-btn" class="btn btn-secondary py-2 hidden">
+                            <i class="fa fa-sign-out mr-1"></i> 登出
+                        </button>
+                    </div>
+                </div>
+            </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- 页面标题 -->
+        <div class="text-center mb-8">
+            <h1 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-gray-800">账号商城</h1>
+            <p class="text-gray-600 mt-2">浏览和购买高质量游戏账号</p>
+        </div>
+
+        <!-- 筛选器 -->
+        <div class="filter-container mb-8 p-6">
+            <h2 class="text-xl font-semibold mb-4">筛选条件</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">最低等级</label>
+                    <input type="number" id="min-level" class="form-input" placeholder="输入最低等级">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">最低金币 (M)</label>
+                    <input type="number" id="min-coin" class="form-input" placeholder="输入最低金币">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">最低体力</label>
+                    <input type="number" id="min-stamina" class="form-input" placeholder="输入最低体力">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">最低负重</label>
+                    <input type="number" id="min-weight" class="form-input" placeholder="输入最低负重">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">最低价格 (元)</label>
+                    <input type="number" id="min-price" class="form-input" placeholder="输入最低价格">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">最高价格 (元)</label>
+                    <input type="number" id="max-price" class="form-input" placeholder="输入最高价格">
+                </div>
+            </div>
+            <div class="flex justify-end mt-6 gap-3">
+                <button id="reset-filters" class="btn btn-secondary">
+                    <i class="fa fa-refresh mr-1"></i> 重置
+                </button>
+                <button id="apply-filters" class="btn btn-primary">
+                    <i class="fa fa-filter mr-1"></i> 应用筛选
+                </button>
+            </div>
+        </div>
+
+        <!-- 账号列表 -->
+        <div id="accounts-container">
+            <div id="auth-status-container" class="w-full flex justify-center mb-6"></div>
+            <div id="account-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- 账号卡片将通过JavaScript动态生成 -->
+                <div class="empty-state">
+                    <i class="fa fa-search"></i>
+                    <h3 class="text-xl font-medium">加载中...</h3>
+                    <p>正在获取账号列表</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 登录模态框 -->
+    <div id="login-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="text-xl font-bold">用户登录</h2>
+                <button id="login-modal-close" class="text-white hover:text-gray-200 ml-auto">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="login-form">
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">用户名</label>
+                        <input type="text" id="login-username" class="form-input" placeholder="请输入用户名" required autocomplete="username">
+                    </div>
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">密码</label>
+                        <input type="password" id="login-password" class="form-input" placeholder="请输入密码" required autocomplete="current-password">
+                    </div>
+                    <div class="text-center">
+                        <button type="button" id="login-cancel" class="btn btn-secondary mr-3">取消</button>
+                        <button type="submit" id="login-submit" class="btn btn-primary">
+                            <i class="fa fa-sign-in mr-1"></i> 登录
+                        </button>
+                    </div>
+                    <div class="text-center mt-4">
+                        <p class="text-sm text-gray-600">测试账号: test@example.com / password: 123456</p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 账号上传模态框 -->
+    <div id="publish-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="text-xl font-bold">发布账号</h2>
+                <button id="publish-modal-close" class="text-white hover:text-gray-200 ml-auto">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <form id="publish-form">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">账号名称</label>
+                            <input type="text" id="publish-name" class="form-input" placeholder="请输入账号名称" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">等级</label>
+                            <input type="number" id="publish-level" class="form-input" placeholder="请输入账号等级" required min="1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">金币 (M)</label>
+                            <input type="number" id="publish-coin" class="form-input" placeholder="请输入金币数量" required min="0" step="0.1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">体力</label>
+                            <input type="number" id="publish-stamina" class="form-input" placeholder="请输入体力值" required min="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">负重</label>
+                            <input type="number" id="publish-weight" class="form-input" placeholder="请输入负重值" required min="0">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">价格 (元)</label>
+                            <input type="number" id="publish-price" class="form-input" placeholder="请输入账号价格" required min="0" step="0.01">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">账号描述</label>
+                            <textarea id="publish-description" class="form-input" rows="4" placeholder="请输入账号描述信息" required></textarea>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">账号图片 URL</label>
+                            <input type="text" id="publish-image" class="form-input" placeholder="请输入图片链接（可选）">
+                            <p class="text-xs text-gray-500 mt-1">支持 http:// 或 https:// 链接，可选填</p>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">淘宝链接</label>
+                            <input type="text" id="publish-taobao" class="form-input" placeholder="请输入淘宝购买链接" required>
+                            <p class="text-xs text-gray-500 mt-1">请输入完整的淘宝商品链接</p>
+                        </div>
+                    </div>
+                    <div class="text-center mt-8">
+                        <button type="button" id="publish-cancel" class="btn btn-secondary mr-3">取消</button>
+                        <button type="submit" id="publish-submit" class="btn btn-primary">
+                            <i class="fa fa-save mr-1"></i> 发布账号
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 账号详情模态框 -->
+    <div id="detail-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="text-xl font-bold" id="modal-account-name">账号详情</h2>
+                <button id="detail-modal-close" class="text-white hover:text-gray-200 ml-auto">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <div class="mb-6">
+                    <img id="modal-image" src="" alt="账号图片" class="w-full h-64 object-cover rounded-lg">
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700">等级</label>
+                            <div class="flex items-center mt-1">
+                                <i class="fa fa-level-up text-blue-600 mr-2"></i>
+                                <span id="modal-level" class="font-semibold">--</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700">金币</label>
+                            <div class="flex items-center mt-1">
+                                <i class="fa fa-diamond text-blue-600 mr-2"></i>
+                                <span id="modal-coin" class="font-semibold">--</span> M
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700">体力</label>
+                            <div class="flex items-center mt-1">
+                                <i class="fa fa-bolt text-blue-600 mr-2"></i>
+                                <span id="modal-stamina" class="font-semibold">--</span>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-sm font-medium text-gray-700">负重</label>
+                            <div class="flex items-center mt-1">
+                                <i class="fa fa-balance-scale text-blue-600 mr-2"></i>
+                                <span id="modal-weight" class="font-semibold">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">账号描述</label>
+                    <div id="modal-description" class="text-gray-600 bg-gray-50 p-4 rounded-lg">--</div>
+                </div>
+                <div class="text-center">
+                    <button id="modal-buy-btn" class="btn btn-success btn-lg" data-taobao="">
+                        <i class="fa fa-shopping-cart mr-2"></i> 前往淘宝购买
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Supabase库已在头部加载（优先本地，失败则尝试CDN）
+        
+        // 获取createClient函数的多种方式
+        let createClient;
+        try {
+            // 尝试不同的导入方式
+            createClient = window.supabase?.createClient || 
+                           window['@supabase/supabase-js']?.createClient ||
+                           (typeof supabase !== 'undefined' && typeof supabase === 'object' && 'createClient' in supabase ? supabase.createClient : null);
+            if (createClient) {
+                console.log('成功获取createClient函数');
+            } else {
+                console.error('无法获取createClient函数，尝试直接使用全局supabase对象');
+            }
+        } catch (e) {
+            console.error('获取createClient函数失败:', e);
+        }
+        
+        // Supabase配置 - 与simple-supabase-test.html使用相同的有效配置
+        const supabaseUrl = 'https://tdwwcqaxlwqrnjrjhsmn.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkd3djcWF4bHdxcm5qcmpoc21uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI1MjA1MjIsImV4cCI6MjA3ODA5NjUyMn0.wA6EFlKk_Wbs7ZTOS2HoyRTMa_D0DI3BXXAGOEnnLWM';
+        
+        // 添加连接状态检查函数
+        async function checkSupabaseConnection() {
+            if (!supabase) {
+                console.error('Supabase客户端未初始化');
+                return { success: false, error: '客户端未初始化' };
+            }
+            try {
+                // 尝试执行一个简单的查询来测试连接
+                // 注意：rpc('now')可能返回404错误，这表明连接可以建立但特定函数不存在
+                // 使用一个基本的select查询来测试连接
+                const { error } = await supabase
+                    .from('game_accounts')
+                    .select('id')
+                    .limit(1)
+                    .single();
+                    
+                if (error) {
+                    // 404错误可能表示表不存在，但连接本身是成功的
+                    if (error.code === 'PGRST116') {
+                        // 表不存在错误，但连接成功
+                        console.warn('Supabase连接成功，但表结构可能不完整');
+                        return { success: true, warning: '表结构可能不完整' };
+                    }
+                    console.error('Supabase查询错误:', error);
+                    return { 
+                        success: false, 
+                        error: error.message || '查询失败',
+                        errorType: '查询错误'
+                    };
+                }
+                
+                console.log('Supabase连接正常');
+                return { success: true };
+            } catch (error) {
+                console.error('Supabase连接检查失败:', error);
+                // 分析错误类型
+                let errorType = '未知错误';
+                if (error.message && error.message.includes('ERR_NAME_NOT_RESOLVED')) {
+                    errorType = 'URL解析失败';
+                } else if (error.message && error.message.includes('Failed to fetch')) {
+                    errorType = '网络连接失败';
+                } else if (error.message && error.message.includes('404')) {
+                    errorType = '资源未找到';
+                }
+                return { 
+                    success: false, 
+                    error: error.message || '连接失败',
+                    errorType: errorType
+                };
+            }
+        }
+        
+        // 初始化Supabase客户端
+        let supabase;
+        let supabaseConnectionStatus = { success: false };
+        try {
+            if (createClient) {
+                supabase = createClient(supabaseUrl, supabaseKey);
+                console.log('Supabase客户端初始化成功');
+                // 异步检查连接状态
+                checkSupabaseConnection().then(connectionResult => {
+                    // 存储完整的连接状态结果
+                    supabaseConnectionStatus = connectionResult;
+                    
+                    if (!connectionResult.success) {
+                        console.warn('Supabase初始化成功但连接测试失败，错误类型:', connectionResult.errorType);
+                        // 显示连接失败提示，传递错误类型
+                        showConnectionStatus(false, connectionResult.errorType, connectionResult.error);
+                    } else {
+                        // 连接成功，但可能有警告
+                        showConnectionStatus(true, null, connectionResult.warning || '');
+                        
+                        // 尝试获取账号数据
+                        fetchAccounts();
+                    }
+                });
+            } else {
+                console.error('createClient函数不可用，无法初始化Supabase客户端');
+                showConnectionStatus(false, '初始化失败', '无法获取createClient函数');
+            }
+        } catch (error) {
+            console.error('Supabase初始化错误:', error);
+            showConnectionStatus(false, '初始化错误', error.message || '客户端初始化失败');
+        }
+        
+        // 显示连接状态提示
+        function showConnectionStatus(isConnected, errorType, message) {
+            const statusBar = document.getElementById('supabase-status') || createStatusBar();
+            if (isConnected) {
+                statusBar.textContent = message ? `已连接到Supabase (${message})` : '已连接到Supabase';
+                statusBar.className = 'supabase-status connected';
+            } else {
+                // 根据错误类型显示不同的错误消息
+                let errorMessage = 'Supabase连接失败，请检查网络或URL配置';
+                
+                switch (errorType) {
+                    case 'URL解析失败':
+                        errorMessage = 'Supabase URL解析失败，请检查配置是否正确';
+                        break;
+                    case '网络连接失败':
+                        errorMessage = '网络连接失败，请检查您的网络设置';
+                        break;
+                    case '资源未找到':
+                        errorMessage = '请求的资源未找到，可能是权限问题';
+                        break;
+                    case '初始化失败':
+                    case '初始化错误':
+                        errorMessage = 'Supabase客户端初始化失败';
+                        break;
+                }
+                
+                // 如果有更具体的错误消息，显示它
+                if (message && message.length > 0) {
+                    errorMessage += `: ${message}`;
+                }
+                
+                statusBar.textContent = errorMessage;
+                statusBar.className = 'supabase-status disconnected';
+            }
+        }
+        
+        // 创建状态提示栏
+        function createStatusBar() {
+            const statusBar = document.createElement('div');
+            statusBar.id = 'supabase-status';
+            statusBar.style.position = 'fixed';
+            statusBar.style.top = '0';
+            statusBar.style.left = '0';
+            statusBar.style.right = '0';
+            statusBar.style.padding = '10px';
+            statusBar.style.textAlign = 'center';
+            statusBar.style.zIndex = '9999';
+            statusBar.style.fontSize = '14px';
+            document.body.prepend(statusBar);
+            return statusBar;
+        }
+        
+        // 已移除所有模拟账号数据，系统现在完全依赖实际数据
+        // 即使连接失败，也不会使用虚拟数据，而是显示错误状态
+
+        // 用户登录状态
+        let currentUser = null;
+        
+        // DOM加载完成后执行
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化移动菜单
+            initMobileMenu();
+            
+            // 绑定按钮事件
+            bindButtonEvents();
+            
+            // 创建并显示Supabase连接状态提示栏
+            createStatusBar();
+            
+            // 立即检查并显示连接状态，但不再直接调用fetchAccounts
+            // 因为fetchAccounts已经在连接成功时自动调用
+            checkSupabaseConnection().then(result => {
+                // 显示最新的连接状态，包括错误类型和消息
+                showConnectionStatus(result.success, result.errorType, result.error);
+                
+                // 只有在连接失败时才显示额外的错误界面
+                if (!result.success) {
+                    console.warn('Supabase连接失败，无法获取账号数据:', result.errorType);
+                    // 显示连接错误状态
+                    const accountsContainer = document.getElementById('accounts-container');
+                    if (accountsContainer) {
+                        let errorMessage = '无法连接到Supabase服务器，请检查网络连接或稍后重试';
+                        let errorAdvice = '请确保您的网络连接正常，并且可以访问互联网。';
+                        
+                        switch (result.errorType) {
+                            case 'URL解析失败':
+                                errorMessage = 'Supabase URL解析失败';
+                                errorAdvice = '请检查Supabase URL配置是否正确，或者您的网络是否允许访问此域名。';
+                                break;
+                            case '网络连接失败':
+                                errorMessage = '网络连接失败';
+                                errorAdvice = '请检查您的网络连接，确保防火墙没有阻止对Supabase的访问。';
+                                break;
+                            case '资源未找到':
+                                errorMessage = '请求的资源未找到';
+                                errorAdvice = '可能是权限问题或服务配置错误，请检查Supabase设置。';
+                                break;
+                            case '查询错误':
+                                errorMessage = '数据查询失败';
+                                errorAdvice = '可能是表结构问题，请检查数据库配置。';
+                                break;
+                        }
+                        
+                        accountsContainer.innerHTML = `
+                            <div class="error-state text-center py-12">
+                                <i class="fa fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                                <h3 class="text-lg font-medium text-gray-900 mb-2">${result.errorType}</h3>
+                                <p class="text-gray-600 mb-2">${errorMessage}</p>
+                                <p class="text-gray-500 mb-6">${errorAdvice}</p>
+                                <button id="retry-connection" class="btn btn-primary">
+                                    <i class="fa fa-refresh mr-2"></i>重试连接
+                                </button>
+                            </div>
+                        `;
+                        // 绑定重试按钮事件
+                        document.getElementById('retry-connection').addEventListener('click', async () => {
+                            // 更新按钮状态
+                            const button = document.getElementById('retry-connection');
+                            const originalText = button.innerHTML;
+                            button.disabled = true;
+                            button.innerHTML = '<i class="fa fa-spinner fa-spin mr-2"></i>连接中...';
+                            
+                            try {
+                                // 重新检查连接
+                                const retryResult = await checkSupabaseConnection();
+                                
+                                // 更新连接状态显示
+                                showConnectionStatus(retryResult.success, retryResult.errorType, retryResult.error);
+                                
+                                // 如果连接成功，调用fetchAccounts获取数据
+                                if (retryResult.success) {
+                                    fetchAccounts();
+                                }
+                            } catch (error) {
+                                console.error('重试连接时发生错误:', error);
+                                showToast('重试连接失败，请稍后再试', 'error');
+                            } finally {
+                                // 恢复按钮状态
+                                button.disabled = false;
+                                button.innerHTML = originalText;
+                            }
+                        });
+                    }
+                }
+            });
+            
+            // 检查本地存储中的登录状态
+            checkLoginStatus();
+        });
+
+        // 初始化移动菜单
+        function initMobileMenu() {
+            const mobileMenuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (mobileMenuButton && mobileMenu) {
+                mobileMenuButton.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+        }
+
+        // 绑定按钮事件
+        function bindButtonEvents() {
+            // 筛选按钮
+            const applyFiltersBtn = document.getElementById('apply-filters');
+            if (applyFiltersBtn) applyFiltersBtn.addEventListener('click', applyFilters);
+            
+            const resetFiltersBtn = document.getElementById('reset-filters');
+            if (resetFiltersBtn) resetFiltersBtn.addEventListener('click', resetFilters);
+            
+            // 模态框关闭按钮
+            const detailModalCloseBtn = document.getElementById('detail-modal-close');
+            if (detailModalCloseBtn) detailModalCloseBtn.addEventListener('click', closeDetailModal);
+            
+            // 登录相关按钮
+            const loginBtn = document.getElementById('login-btn');
+            if (loginBtn) loginBtn.addEventListener('click', showLoginModal);
+            
+            const mobileLoginBtn = document.getElementById('mobile-login-btn');
+            if (mobileLoginBtn) mobileLoginBtn.addEventListener('click', showLoginModal);
+            
+            const loginModalCloseBtn = document.getElementById('login-modal-close');
+            if (loginModalCloseBtn) loginModalCloseBtn.addEventListener('click', closeLoginModal);
+            
+            const loginCancelBtn = document.getElementById('login-cancel');
+            if (loginCancelBtn) loginCancelBtn.addEventListener('click', closeLoginModal);
+            
+            const loginForm = document.getElementById('login-form');
+            if (loginForm) loginForm.addEventListener('submit', handleLoginSubmit);
+            
+            // 登出相关按钮
+            const logoutBtn = document.getElementById('logout-btn');
+            if (logoutBtn) logoutBtn.addEventListener('click', handleLogout);
+            
+            const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+            if (mobileLogoutBtn) mobileLogoutBtn.addEventListener('click', handleLogout);
+            
+            // 发布账号按钮
+            const publishAccountBtn = document.getElementById('publish-account-btn');
+            if (publishAccountBtn) publishAccountBtn.addEventListener('click', showPublishModal);
+            
+            const mobilePublishBtn = document.getElementById('mobile-publish-btn');
+            if (mobilePublishBtn) mobilePublishBtn.addEventListener('click', showPublishModal);
+            
+            const publishModalCloseBtn = document.getElementById('publish-modal-close');
+            if (publishModalCloseBtn) publishModalCloseBtn.addEventListener('click', closePublishModal);
+            
+            const publishCancelBtn = document.getElementById('publish-cancel');
+            if (publishCancelBtn) publishCancelBtn.addEventListener('click', closePublishModal);
+            
+            const publishForm = document.getElementById('publish-form');
+            if (publishForm) publishForm.addEventListener('submit', handlePublishSubmit);
+        }
+
+        // 获取账号列表（从Supabase）
+        async function fetchAccounts() {
+            try {
+                // 显示加载状态
+                const grid = document.getElementById('account-grid');
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa fa-spinner fa-spin fa-3x"></i>
+                        <h3>加载中...</h3>
+                    </div>
+                `;
+                
+                // 检查Supabase客户端是否可用
+                if (!supabase) {
+                    const errorMessage = '数据连接未初始化';
+                    console.error(errorMessage);
+                    showToast(`${errorMessage}，请检查网络连接或Supabase配置`, 'error');
+                    
+                    // 更新连接状态显示
+                    showConnectionStatus(false);
+                    
+                    // 显示错误状态
+                    grid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fa fa-exclamation-circle"></i>
+                            <h3>${errorMessage}</h3>
+                            <p>无法连接到数据服务，请刷新页面重试</p>
+                            <button class="btn btn-primary mt-4" onclick="location.reload()">
+                                <i class="fa fa-refresh"></i> 刷新页面
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 每次调用都先检查Supabase连接状态
+                const connectionResult = await checkSupabaseConnection();
+                if (!connectionResult.success) {
+                    console.error('Supabase连接失败:', connectionResult.error);
+                    showToast(`Supabase连接失败: ${connectionResult.error}`, 'error');
+                    
+                    // 更新连接状态显示
+                    showConnectionStatus(false);
+                    
+                    // 根据错误类型显示不同的错误消息和解决方案
+                    let errorDetail = '';
+                    let recoveryAction = `<button class="btn btn-primary mt-4" onclick="fetchAccounts()">
+                        <i class="fa fa-refresh"></i> 重试
+                    </button>`;
+                    
+                    switch (connectionResult.errorType) {
+                        case 'URL解析失败':
+                            errorDetail = '无法解析Supabase URL，请检查配置是否正确';
+                            recoveryAction = `<button class="btn btn-primary mt-4" onclick="location.reload()">
+                                <i class="fa fa-refresh"></i> 检查配置
+                            </button>`;
+                            break;
+                        case '网络连接失败':
+                            errorDetail = '无法连接到网络，请检查您的网络设置';
+                            recoveryAction = `<button class="btn btn-primary mt-4" onclick="fetchAccounts()">
+                                <i class="fa fa-refresh"></i> 检查连接
+                            </button>`;
+                            break;
+                        case '资源未找到':
+                            errorDetail = '请求的资源未找到，可能是权限问题或服务配置错误';
+                            break;
+                        default:
+                            errorDetail = '无法连接到Supabase服务，请稍后再试';
+                    }
+                    
+                    // 显示错误状态
+                    grid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fa fa-exclamation-circle"></i>
+                            <h3>Supabase连接失败</h3>
+                            <p>${errorDetail}</p>
+                            ${recoveryAction}
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // 如果有警告信息，显示警告但继续尝试获取数据
+                if (connectionResult.warning) {
+                    console.warn(connectionResult.warning);
+                    showToast(connectionResult.warning, 'warning');
+                }
+                
+                // 从Supabase获取账号数据
+                const { data, error } = await supabase
+                    .from('game_accounts')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                    
+                if (error) {
+                    console.error('Supabase查询错误:', error);
+                    
+                    // 分析错误类型
+                    let errorType = '获取数据失败';
+                    let errorMessage = error.message || '未知错误';
+                    
+                    if (error.message && error.message.includes('ERR_NAME_NOT_RESOLVED')) {
+                        errorType = 'URL解析失败';
+                        errorMessage = '无法解析Supabase服务器地址，请检查网络连接或DNS设置';
+                    } else if (error.message && error.message.includes('Failed to fetch')) {
+                        errorType = '网络连接失败';
+                        errorMessage = '网络请求失败，请检查您的网络连接';
+                    }
+                    
+                    showToast(`${errorType}: ${errorMessage}`, 'error');
+                    
+                    // 更新连接状态
+                    showConnectionStatus(false);
+                    
+                    // 显示错误状态
+                    grid.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fa fa-exclamation-circle"></i>
+                            <h3>${errorType}</h3>
+                            <p>${errorMessage}</p>
+                            <button class="btn btn-primary mt-4" onclick="checkSupabaseConnection().then(result => { showConnectionStatus(result.success); if(result.success) fetchAccounts(); })">
+                                <i class="fa fa-refresh"></i> 重试
+                            </button>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                console.log('从Supabase获取到的账号数量:', data?.length || 0);
+                
+                // 应用筛选条件
+                let filteredAccounts = data || [];
+                const minLevel = parseInt(document.getElementById('min-level').value) || 0;
+                const minCoin = parseFloat(document.getElementById('min-coin').value) || 0;
+                const minStamina = parseInt(document.getElementById('min-stamina').value) || 0;
+                const minWeight = parseInt(document.getElementById('min-weight').value) || 0;
+                const minPrice = parseFloat(document.getElementById('min-price').value) || 0;
+                const maxPrice = parseFloat(document.getElementById('max-price').value) || Infinity;
+                
+                if (minLevel > 0 || minCoin > 0 || minStamina > 0 || minWeight > 0 || minPrice > 0 || maxPrice < Infinity) {
+                    filteredAccounts = filteredAccounts.filter(account => 
+                        account.account_level >= minLevel &&
+                        account.haf_coin >= minCoin &&
+                        account.stamina_level >= minStamina &&
+                        account.weight_level >= minWeight &&
+                        account.price >= minPrice &&
+                        account.price <= maxPrice
+                    );
+                }
+                
+                renderAccounts(filteredAccounts);
+            } catch (error) {
+                console.error('获取账号列表出错:', error);
+                
+                // 分析错误类型
+                let errorType = '加载异常';
+                let errorMessage = '无法获取账号列表，请检查网络连接后重试';
+                let actionText = '重试';
+                let actionFunction = 'fetchAccounts()';
+                
+                // 检测URL解析错误
+                if (error.message && error.message.includes('ERR_NAME_NOT_RESOLVED')) {
+                    errorType = 'URL解析失败';
+                    errorMessage = '无法解析Supabase服务器地址，请检查Supabase URL配置或DNS设置';
+                    actionText = '检查配置';
+                    actionFunction = 'location.reload()';
+                } else if (error.message && error.message.includes('Failed to fetch')) {
+                    errorType = '网络连接失败';
+                    errorMessage = '网络请求失败，请检查您的网络连接和防火墙设置';
+                }
+                
+                showToast(`${errorType}: ${errorMessage}`, 'error');
+                
+                // 更新连接状态
+                showConnectionStatus(false);
+                
+                // 显示错误状态
+                const grid = document.getElementById('account-grid');
+                grid.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fa fa-exclamation-circle"></i>
+                        <h3>${errorType}</h3>
+                        <p>${errorMessage}</p>
+                        <div class="flex flex-col sm:flex-row gap-2 justify-center mt-4">
+                            <button class="btn btn-primary" onclick="${actionFunction}">
+                                <i class="fa fa-refresh"></i> ${actionText}
+                            </button>
+                            <button class="btn btn-secondary" onclick="checkSupabaseConnection().then(result => { showConnectionStatus(result.success); if(result.success) fetchAccounts(); })">
+                                <i class="fa fa-plug"></i> 检查连接
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+    
+          // 应用筛选条件到数据（现在直接在fetchAccounts中实现）
+        // 保留此函数以兼容可能的调用
+        function applyFilterToMockData() {
+            console.warn('applyFilterToMockData: 此函数已弃用，请使用fetchAccounts()');
+            return []; // 不再返回模拟数据
+        }
+
+        // 渲染账号列表
+        function renderAccounts(accounts) {
+            const grid = document.getElementById('account-grid');
+            grid.innerHTML = '';
+            
+            if (accounts.length === 0) {
+                // 检查是否有筛选条件被设置
+                const hasActiveFilters = document.getElementById('min-level').value ||
+                                        document.getElementById('min-coin').value ||
+                                        document.getElementById('min-stamina').value ||
+                                        document.getElementById('min-weight').value;
+                
+                let emptyStateContent = '';
+                if (hasActiveFilters) {
+                    // 有筛选条件时的提示
+                    emptyStateContent = `
+                        <div class="empty-state">
+                            <i class="fa fa-search"></i>
+                            <h3>没有找到符合条件的账号</h3>
+                            <p>请尝试调整筛选条件</p>
+                            <button class="btn btn-secondary mt-4" onclick="resetFilters()">
+                                <i class="fa fa-refresh"></i> 重置筛选条件
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // 没有筛选条件时的提示
+                    emptyStateContent = `
+                        <div class="empty-state">
+                            <i class="fa fa-shopping-bag"></i>
+                            <h3>商城暂时没有可售账号</h3>
+                            <p>账号可能已经全部售罄，请稍后再来查看</p>
+                            <button class="btn btn-primary mt-4" onclick="window.location.reload()">
+                                <i class="fa fa-refresh"></i> 刷新页面
+                            </button>
+                        </div>
+                    `;
+                }
+                
+                grid.innerHTML = emptyStateContent;
+                return;
+            }
+            
+            accounts.forEach(account => {
+                const card = document.createElement('div');
+                card.className = 'account-card bg-white shadow-md overflow-hidden';
+                card.dataset.id = account.id;
+                
+                const imageUrl = account.image_url || 'https://placehold.co/600x400?text=暂无图片';
+                
+                card.innerHTML = `
+                    <div class="card-image overflow-hidden">
+                        <img src="${imageUrl}" alt="${account.account_name}">
+                    </div>
+                    <div class="card-content p-4">
+                        <h3 class="account-name text-lg font-semibold mb-3">${account.account_name}</h3>
+                        <div class="account-stats flex flex-wrap gap-2 mb-4">
+                            <div class="stat-item">
+                                <i class="fa fa-level-up"></i>
+                                <span class="stat-value">Lv.${account.account_level}</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fa fa-diamond"></i>
+                                <span class="stat-value">${account.haf_coin}M</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fa fa-bolt"></i>
+                                <span class="stat-value">体力:${account.stamina_level}</span>
+                            </div>
+                            <div class="stat-item">
+                                <i class="fa fa-balance-scale"></i>
+                                <span class="stat-value">负重:${account.weight_level}</span>
+                            </div>
+                        </div>
+                        <div class="account-price text-red-600 font-bold text-xl">
+                            ¥${account.price}
+                        </div>
+                    </div>
+                    <div class="card-footer p-4 bg-gray-50 border-t">
+                        <div class="card-actions flex gap-2">
+                            <button class="btn btn-primary btn-sm flex-1 view-details">
+                                <i class="fa fa-eye mr-1"></i> 查看详情
+                            </button>
+                            <button class="btn btn-success btn-sm flex-1 buy-account" data-taobao="${account.taobao_link}">
+                                <i class="fa fa-shopping-cart mr-1"></i> 购买
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                grid.appendChild(card);
+                
+                // 绑定查看详情事件
+                card.querySelector('.view-details').addEventListener('click', () => {
+                    showAccountDetails(account);
+                });
+                
+                // 绑定购买事件
+                card.querySelector('.buy-account').addEventListener('click', function() {
+                    const taobaoLink = this.getAttribute('data-taobao');
+                    openTaobaoLink(taobaoLink);
+                });
+            });
+        }
+
+        // 当前选中的账号
+        let currentAccount = null;
+        
+        // 显示账号详情
+        function showAccountDetails(account) {
+            currentAccount = account;
+            const modal = document.getElementById('detail-modal');
+            
+            if (!modal) {
+                showToast('模态框加载失败', 'error');
+                return;
+            }
+            
+            // 设置模态框内容
+            const modalAccountName = document.getElementById('modal-account-name');
+            const modalImage = document.getElementById('modal-image');
+            const modalLevel = document.getElementById('modal-level');
+            const modalCoin = document.getElementById('modal-coin');
+            const modalStamina = document.getElementById('modal-stamina');
+            const modalWeight = document.getElementById('modal-weight');
+            const modalDescription = document.getElementById('modal-description');
+            
+            if (modalAccountName) modalAccountName.textContent = account.account_name || '';
+            if (modalImage) modalImage.src = account.image_url || 'https://placehold.co/800x600?text=暂无图片';
+            if (modalLevel) modalLevel.textContent = account.account_level || 0;
+            if (modalCoin) modalCoin.textContent = account.haf_coin || 0;
+            if (modalStamina) modalStamina.textContent = account.stamina_level || 0;
+            if (modalWeight) modalWeight.textContent = account.weight_level || 0;
+            if (modalDescription) modalDescription.textContent = account.description || '暂无描述';
+            
+            // 设置购买按钮的淘宝链接
+            const buyBtn = document.getElementById('modal-buy-btn');
+            if (buyBtn) {
+                buyBtn.setAttribute('data-taobao', account.taobao_link || '');
+                // 绑定购买事件
+                buyBtn.onclick = function() {
+                    const taobaoLink = this.getAttribute('data-taobao');
+                    if (taobaoLink) {
+                        openTaobaoLink(taobaoLink);
+                    } else {
+                        showToast('暂无购买链接', 'error');
+                    }
+                };
+            }
+            
+            // 显示价格
+            const priceElement = document.createElement('div');
+            priceElement.className = 'mb-3';
+            priceElement.innerHTML = `
+                <label class="block text-sm font-medium text-gray-700 mb-1">价格</label>
+                <div class="flex items-center">
+                    <i class="fa fa-money text-green-600 mr-2"></i>
+                    <span class="font-semibold text-red-600">¥${account.price || 0}</span> 元
+                </div>
+            `;
+            
+            // 将价格信息添加到模态框中
+            const statsContainer = document.querySelector('#detail-modal .grid');
+            if (statsContainer) {
+                // 检查是否已经存在价格元素，如果存在则移除
+                const existingPriceElement = statsContainer.querySelector('.price-info');
+                if (existingPriceElement) {
+                    existingPriceElement.remove();
+                }
+                priceElement.classList.add('price-info');
+                statsContainer.appendChild(priceElement);
+                
+                // 添加发布者信息（如果有）
+                const existingPublisherElement = statsContainer.querySelector('.publisher-info');
+                if (existingPublisherElement) {
+                    existingPublisherElement.remove();
+                }
+                
+                if (account.published_by) {
+                    const publisherElement = document.createElement('div');
+                    publisherElement.className = 'mb-3 publisher-info';
+                    publisherElement.innerHTML = `
+                        <label class="block text-sm font-medium text-gray-700 mb-1">发布信息</label>
+                        <div class="space-y-1">
+                            <div class="flex items-center">
+                                <i class="fa fa-user text-blue-600 mr-2"></i>
+                                <span>发布者: ${account.published_by}</span>
+                            </div>
+                            ${account.published_at ? `
+                            <div class="flex items-center">
+                                <i class="fa fa-clock-o text-gray-600 mr-2"></i>
+                                <span>发布时间: ${account.published_at}</span>
+                            </div>` : ''}
+                        </div>
+                    `;
+                    statsContainer.appendChild(publisherElement);
+                }
+            }
+            
+            // 显示模态框
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden'; // 防止背景滚动
+        }
+
+        // 关闭详情模态框
+        function closeDetailModal() {
+            const modal = document.getElementById('detail-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+
+        // 购买相关函数已移除
+
+        // 其他购买相关函数已移除
+        // 购买记录相关函数已移除
+        // 复制凭证功能已移除
+
+        // 打开淘宝链接
+        function openTaobaoLink(link) {
+            // 在新标签页打开淘宝链接
+            window.open(link, '_blank');
+            // 显示提示消息
+            showToast('正在跳转到淘宝购买页面...', 'success');
+        }
+
+        // 显示提示消息
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<i class="fa ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'} mr-2"></i>${message}`;
+            
+            document.body.appendChild(toast);
+            
+            // 3秒后自动关闭
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // 应用筛选
+        function applyFilters() {
+            fetchAccounts();
+        }
+
+        // 重置筛选
+        function resetFilters() {
+            document.getElementById('min-level').value = '';
+            document.getElementById('min-coin').value = '';
+            document.getElementById('min-stamina').value = '';
+            document.getElementById('min-weight').value = '';
+            document.getElementById('min-price').value = '';
+            document.getElementById('max-price').value = '';
+            fetchAccounts();
+        }
+
+        // 检查登录状态
+        function checkLoginStatus() {
+            // 从本地存储中获取用户信息
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                try {
+                    currentUser = JSON.parse(savedUser);
+                    updateUIForLoggedInUser();
+                } catch (e) {
+                    console.error('解析用户信息出错:', e);
+                    localStorage.removeItem('currentUser');
+                }
+            }
+        }
+        
+        // 更新登录状态后的UI
+        function updateUIForLoggedInUser() {
+            if (currentUser) {
+                // 显示登录状态
+                const loginStatus = document.getElementById('login-status');
+                if (loginStatus) loginStatus.classList.remove('hidden');
+                
+                const mobileLoginStatus = document.getElementById('mobile-login-status');
+                if (mobileLoginStatus) mobileLoginStatus.classList.remove('hidden');
+                
+                const currentUserEl = document.getElementById('current-user');
+                if (currentUserEl) currentUserEl.textContent = currentUser.username;
+                
+                const mobileCurrentUserEl = document.getElementById('mobile-current-user');
+                if (mobileCurrentUserEl) mobileCurrentUserEl.textContent = currentUser.username;
+                
+                // 隐藏登录按钮
+                const loginBtn = document.getElementById('login-btn');
+                if (loginBtn) loginBtn.classList.add('hidden');
+                
+                const mobileLoginBtn = document.getElementById('mobile-login-btn');
+                if (mobileLoginBtn) mobileLoginBtn.classList.add('hidden');
+                
+                // 显示发布账号和登出按钮
+                const publishAccountBtn = document.getElementById('publish-account-btn');
+                if (publishAccountBtn) publishAccountBtn.classList.remove('hidden');
+                
+                const mobilePublishBtn = document.getElementById('mobile-publish-btn');
+                if (mobilePublishBtn) mobilePublishBtn.classList.remove('hidden');
+                
+                const logoutBtn = document.getElementById('logout-btn');
+                if (logoutBtn) logoutBtn.classList.remove('hidden');
+                
+                const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+                if (mobileLogoutBtn) mobileLogoutBtn.classList.remove('hidden');
+            } else {
+                // 隐藏登录状态
+                const loginStatus = document.getElementById('login-status');
+                if (loginStatus) loginStatus.classList.add('hidden');
+                
+                const mobileLoginStatus = document.getElementById('mobile-login-status');
+                if (mobileLoginStatus) mobileLoginStatus.classList.add('hidden');
+                
+                // 显示登录按钮
+                const loginBtn = document.getElementById('login-btn');
+                if (loginBtn) loginBtn.classList.remove('hidden');
+                
+                const mobileLoginBtn = document.getElementById('mobile-login-btn');
+                if (mobileLoginBtn) mobileLoginBtn.classList.remove('hidden');
+                
+                // 隐藏发布账号和登出按钮
+                const publishAccountBtn = document.getElementById('publish-account-btn');
+                if (publishAccountBtn) publishAccountBtn.classList.add('hidden');
+                
+                const mobilePublishBtn = document.getElementById('mobile-publish-btn');
+                if (mobilePublishBtn) mobilePublishBtn.classList.add('hidden');
+                
+                const logoutBtn = document.getElementById('logout-btn');
+                if (logoutBtn) logoutBtn.classList.add('hidden');
+                
+                const mobileLogoutBtn = document.getElementById('mobile-logout-btn');
+                if (mobileLogoutBtn) mobileLogoutBtn.classList.add('hidden');
+            }
+        }
+        
+        // 显示登录模态框
+        function showLoginModal() {
+            const modal = document.getElementById('login-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                // 重置表单
+                const loginForm = document.getElementById('login-form');
+                if (loginForm) loginForm.reset();
+            }
+        }
+        
+        // 关闭登录模态框
+        function closeLoginModal() {
+            const modal = document.getElementById('login-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+        
+        // 处理登录提交
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            
+            try {
+                const usernameInput = document.getElementById('login-username');
+                const passwordInput = document.getElementById('login-password');
+                
+                if (!usernameInput || !passwordInput) {
+                    showToast('表单元素加载失败，请刷新页面重试', 'error');
+                    return;
+                }
+                
+                const username = usernameInput.value;
+                const password = passwordInput.value;
+                
+                // 表单验证
+                if (!username || !password) {
+                    showToast('请输入用户名和密码', 'error');
+                    return;
+                }
+                
+                // 简单的模拟登录逻辑（实际项目中应该发送到后端验证）
+                // 测试账号：test@example.com / 123456
+                if ((username === 'test@example.com' && password === '123456') || 
+                    (username === 'admin' && password === 'admin123')) {
+                    
+                    currentUser = {
+                        id: Date.now().toString(),
+                        username: username
+                    };
+                    
+                    // 保存到本地存储
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                    
+                    // 更新UI
+                    updateUIForLoggedInUser();
+                    
+                    // 关闭登录模态框
+                    closeLoginModal();
+                    
+                    // 显示成功提示
+                    showToast('登录成功！', 'success');
+                } else {
+                    throw new Error('用户名或密码错误');
+                }
+            } catch (error) {
+                console.error('登录出错:', error);
+                showToast('登录失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 处理登出
+        function handleLogout() {
+            // 清除当前用户
+            currentUser = null;
+            
+            // 从本地存储中移除
+            localStorage.removeItem('currentUser');
+            
+            // 更新UI
+            updateUIForLoggedInUser();
+            
+            // 显示成功提示
+            showToast('已成功登出', 'success');
+        }
+        
+        // 显示发布账号模态框
+        function showPublishModal() {
+            // 检查是否已登录
+            if (!currentUser) {
+                // 如果未登录，显示提示信息并打开登录模态框
+                showToast('请先登录再发布账号', 'info');
+                setTimeout(() => {
+                    showLoginModal();
+                }, 1000); // 延迟1秒打开登录模态框，让用户看到提示
+                return;
+            }
+            
+            const modal = document.getElementById('publish-modal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                // 重置表单
+                const publishForm = document.getElementById('publish-form');
+                if (publishForm) publishForm.reset();
+            }
+        }
+
+        // 关闭发布账号模态框
+        function closePublishModal() {
+            const modal = document.getElementById('publish-modal');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        // 处理账号发布提交
+        // 添加一个变量来追踪发布状态
+        let isPublishing = false;
+        
+        async function handlePublishSubmit(e) {
+            e.preventDefault();
+            
+            // 检查是否已经在发布中
+            if (isPublishing) {
+                showToast('正在处理发布请求，请稍候...', 'info');
+                return;
+            }
+            
+            // 设置为发布中状态
+            isPublishing = true;
+            
+            // 更新按钮状态显示发布中
+            const publishButton = document.getElementById('publish-submit');
+            const originalButtonText = publishButton.innerHTML;
+            publishButton.disabled = true;
+            publishButton.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 发布中...';
+            
+            // 再次检查登录状态（防止绕过前端验证）
+            if (!currentUser) {
+                showToast('请先登录再发布账号', 'error');
+                setTimeout(() => {
+                    showLoginModal();
+                }, 1000);
+                // 恢复按钮状态
+                isPublishing = false;
+                publishButton.disabled = false;
+                publishButton.innerHTML = originalButtonText;
+                return;
+            }
+            
+            try {
+                // 获取表单元素并检查
+                const nameInput = document.getElementById('publish-name');
+                const levelInput = document.getElementById('publish-level');
+                const coinInput = document.getElementById('publish-coin');
+                const staminaInput = document.getElementById('publish-stamina');
+                const weightInput = document.getElementById('publish-weight');
+                const priceInput = document.getElementById('publish-price');
+                const descInput = document.getElementById('publish-description');
+                const imageInput = document.getElementById('publish-image');
+                const taobaoInput = document.getElementById('publish-taobao');
+                
+                // 表单验证
+                if (!nameInput || !levelInput || !priceInput || !imageInput || !taobaoInput) {
+                    showToast('表单元素加载失败，请刷新页面重试', 'error');
+                    return;
+                }
+                
+                // 获取表单数据
+                const newAccount = {
+                    id: Date.now().toString(), // 生成唯一ID
+                    account_name: nameInput.value,
+                    account_level: parseInt(levelInput.value) || 0,
+                    haf_coin: parseFloat(coinInput.value) || 0,
+                    stamina_level: parseInt(staminaInput.value) || 0,
+                    weight_level: parseInt(weightInput.value) || 0,
+                    price: parseFloat(priceInput.value) || 0,
+                    description: descInput ? descInput.value : '',
+                    image_url: imageInput.value || 'https://placehold.co/600x400?text=暂无图片', // 空图片URL时使用默认占位符
+                    taobao_link: taobaoInput.value,
+                    published_by: currentUser.username, // 添加发布者信息
+                    published_at: new Date().toLocaleString() // 添加发布时间
+                };
+                
+                // 验证链接格式
+                // 图片URL是可选的，只有当URL不为空时才检查格式
+                if (newAccount.image_url && !newAccount.image_url.startsWith('http://') && !newAccount.image_url.startsWith('https://')) {
+                    throw new Error('图片链接必须以 http:// 或 https:// 开头');
+                }
+                
+                if (!newAccount.taobao_link.startsWith('http://') && !newAccount.taobao_link.startsWith('https://')) {
+                    throw new Error('淘宝链接必须以 http:// 或 https:// 开头');
+                }
+                
+                // 检查Supabase客户端是否可用
+                if (!supabase || !supabaseConnected) {
+                    const errorMessage = !supabase ? '数据连接未初始化' : 'Supabase连接失败';
+                    console.error(errorMessage);
+                    showToast(`${errorMessage}，无法发布账号，请检查网络连接或Supabase配置`, 'error');
+                    
+                    // 更新连接状态显示
+                    showConnectionStatus(false);
+                    
+                    // 恢复按钮状态
+                    isPublishing = false;
+                    publishButton.disabled = false;
+                    publishButton.innerHTML = originalButtonText;
+                    return;
+                }
+                
+                try {
+                    // 添加到Supabase中
+                    const { error } = await supabase
+                        .from('game_accounts')
+                        .insert({
+                            account_name: newAccount.account_name,
+                            account_level: newAccount.account_level,
+                            haf_coin: newAccount.haf_coin,
+                            stamina_level: newAccount.stamina_level,
+                            weight_level: newAccount.weight_level,
+                            price: newAccount.price,
+                            description: newAccount.description,
+                            image_url: newAccount.image_url,
+                            taobao_link: newAccount.taobao_link,
+                            published_by: newAccount.published_by,
+                            published_at: newAccount.published_at,
+                            created_at: new Date().toISOString()
+                        });
+                    
+                    if (error) {
+                        console.error('Supabase插入错误:', error);
+                        throw new Error('发布失败: ' + error.message);
+                    }
+                    
+                    // 重新渲染账号列表
+                    fetchAccounts();
+                    
+                    // 关闭模态框
+                    closePublishModal();
+                    
+                    // 显示成功提示
+                    showToast('账号发布成功！', 'success');
+                    
+                    // 恢复按钮状态
+                    isPublishing = false;
+                    publishButton.disabled = false;
+                    publishButton.innerHTML = originalButtonText;
+                } catch (supabaseError) {
+                    console.error('Supabase操作异常:', supabaseError);
+                    throw supabaseError;
+                }
+            } catch (error) {
+                console.error('发布账号出错:', error);
+                showToast('发布失败: ' + error.message, 'error');
+                
+                // 恢复按钮状态
+                isPublishing = false;
+                publishButton.disabled = false;
+                publishButton.innerHTML = originalButtonText;
+            }
+        }
+
+        // 点击模态框背景关闭模态框
+        window.addEventListener('click', (e) => {
+            const detailModal = document.getElementById('detail-modal');
+            if (e.target === detailModal) closeDetailModal();
+            
+            const publishModal = document.getElementById('publish-modal');
+            if (e.target === publishModal) closePublishModal();
+            
+            const loginModal = document.getElementById('login-modal');
+            if (e.target === loginModal) closeLoginModal();
+        });
+    </script>
+</body>
+</html>

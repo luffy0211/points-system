@@ -596,9 +596,9 @@
             <a href="points.html" class="hover:text-blue-200 transition">积分兑换</a>
             <a href="PointsTop-up.html" class="hover:text-blue-200 transition">积分充值</a>
             <a href="account-shop.html" class="hover:text-blue-200 transition font-semibold border-b-2 border-white">账号商城</a>
+            <button id="view-purchases-btn" class="hover:text-blue-200 transition" style="background: none; border: none; color: white; cursor: pointer;">我的购买</button>
             <div id="auth-links">
                 <span id="user-points" class="mr-4">积分：--</span>
-                <button id="view-purchases-btn" class="hover:text-blue-200 transition" style="background: none; border: none; color: white; cursor: pointer;">我的购买</button>
                 <span class="mx-2">|</span>
                 <a href="login.html" class="hover:text-blue-200 transition">登录</a>
                 <span class="mx-2">|</span>
@@ -623,9 +623,9 @@
                 <a href="points.html" class="py-2 hover:text-blue-200 transition">积分兑换</a>
                 <a href="PointsTop-up.html" class="py-2 hover:text-blue-200 transition">积分充值</a>
                 <a href="account-shop.html" class="py-2 hover:text-blue-200 transition font-semibold">账号商城</a>
+                <button id="mobile-view-purchases-btn" class="py-2 hover:text-blue-200 transition text-left" style="background: none; border: none; color: white; cursor: pointer;">我的购买</button>
                 <div id="mobile-auth-links" class="py-2">
                     <span id="mobile-user-points" class="mr-4">积分：--</span>
-                    <button id="mobile-view-purchases-btn" class="hover:text-blue-200 transition" style="background: none; border: none; color: white; cursor: pointer;">我的购买</button>
                     <span class="mx-2">|</span>
                     <a href="login.html" class="hover:text-blue-200 transition">登录</a>
                     <span class="mx-2">|</span>
@@ -1661,13 +1661,20 @@
     document.getElementById('view-purchases-btn')?.addEventListener('click', showPurchasesModal);
     document.getElementById('mobile-view-purchases-btn')?.addEventListener('click', showPurchasesModal);
     
+    // 确保登录后更新导航栏显示，以便用户可以看到购买记录按钮
+    document.addEventListener('DOMContentLoaded', async () => {
+      await checkAuth();
+    });
+    
     // 显示购买记录模态框
     async function showPurchasesModal() {
       // 检查是否登录
       const isLoggedIn = await checkAuth();
       if (!isLoggedIn) {
-        alert('请先登录');
-        window.location.href = 'login.html';
+        showToast('请先登录以查看购买记录', 'info');
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 1500);
         return;
       }
       
@@ -1676,7 +1683,12 @@
       document.body.style.overflow = 'hidden';
       
       // 加载购买记录
-      await loadUserPurchases();
+      try {
+        await loadUserPurchases();
+      } catch (error) {
+        console.error('加载购买记录失败:', error);
+        showToast('加载购买记录失败，请稍后重试', 'error');
+      }
     }
     
     // 关闭购买记录模态框
@@ -1686,13 +1698,46 @@
       document.body.style.overflow = '';
     }
     
+    // 生成模拟购买记录数据
+    function generateMockPurchases() {
+      const now = new Date();
+      return [
+        {
+          id: '1',
+          account_id: 'account_001',
+          account_name: '高级法师账号',
+          purchased_at: new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(), // 1天前
+          price: 2000,
+          user_id: currentUser?.id || 'user_001'
+        },
+        {
+          id: '2',
+          account_id: 'account_002',
+          account_name: '战士账号',
+          purchased_at: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(), // 3天前
+          price: 1500,
+          user_id: currentUser?.id || 'user_001'
+        },
+        {
+          id: '3',
+          account_id: 'account_003',
+          account_name: '弓箭手账号',
+          purchased_at: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7天前
+          price: 1200,
+          user_id: currentUser?.id || 'user_001'
+        }
+      ];
+    }
+    
     // 加载用户购买记录
     async function loadUserPurchases() {
       try {
         const purchasesList = document.getElementById('purchases-list');
+        
+        // 显示加载状态，添加加载动画
         purchasesList.innerHTML = `
-          <div class="empty-state">
-            <i class="fa fa-shopping-cart"></i>
+          <div class="empty-state text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-blue-500 mb-4"></div>
             <h3>正在加载购买记录...</h3>
             <p>请稍候</p>
           </div>
@@ -1707,9 +1752,10 @@
           
         if (error) {
           console.error('获取购买记录失败:', error);
-          // 显示模拟数据
+          // 显示模拟数据，并添加提示
           const mockPurchases = generateMockPurchases();
           renderPurchasesList(mockPurchases);
+          showToast('无法连接到服务器，显示示例数据', 'info');
           return;
         }
         
@@ -1721,8 +1767,16 @@
         renderPurchasesList(purchases);
       } catch (error) {
         console.error('加载购买记录失败:', error);
-        // 不显示模拟数据，显示空列表
-        renderPurchasesList([]);
+        // 显示错误信息和重新加载按钮
+        const purchasesList = document.getElementById('purchases-list');
+        purchasesList.innerHTML = `
+          <div class="empty-state text-center py-8">
+            <i class="fa fa-exclamation-circle text-red-500 text-4xl mb-4"></i>
+            <h3>加载失败</h3>
+            <p>无法加载购买记录，请稍后重试</p>
+            <button class="btn btn-primary mt-4" onclick="loadUserPurchases()">重新加载</button>
+          </div>
+        `;
       }
     }
     
@@ -1731,26 +1785,40 @@
       const purchasesList = document.getElementById('purchases-list');
       purchasesList.innerHTML = '';
       
+      // 添加列表头部信息
+      const listHeader = document.createElement('div');
+      listHeader.className = 'mb-4 flex justify-between items-center';
+      listHeader.innerHTML = `
+        <h3 class="text-xl font-bold text-gray-800">购买记录 (${purchases.length})</h3>
+        <div class="text-sm text-gray-500">最近更新: ${new Date().toLocaleString('zh-CN')}</div>
+      `;
+      purchasesList.appendChild(listHeader);
+      
+      // 添加购买记录列表
+      const purchasesContainer = document.createElement('div');
+      purchasesContainer.className = 'space-y-4';
+      purchasesList.appendChild(purchasesContainer);
+      
       purchases.forEach(purchase => {
         const purchaseItem = document.createElement('div');
-        purchaseItem.className = 'bg-white rounded-lg shadow p-4 border border-gray-200';
+        purchaseItem.className = 'bg-white rounded-lg shadow p-4 border border-gray-200 hover:shadow-md transition-shadow duration-300';
         
         const purchasedDate = new Date(purchase.purchased_at).toLocaleString('zh-CN');
         
         purchaseItem.innerHTML = `
-          <div class="flex justify-between items-start">
-            <div>
-              <h4 class="font-semibold text-lg mb-2">${purchase.account_name}</h4>
-              <p class="text-gray-600 mb-1">购买时间: ${purchasedDate}</p>
-              <p class="text-blue-600 font-semibold">价格: ${purchase.price} 积分</p>
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div class="mb-3 md:mb-0">
+              <h4 class="font-semibold text-lg mb-1 text-blue-700">${purchase.account_name}</h4>
+              <p class="text-gray-600 text-sm mb-1">购买时间: ${purchasedDate}</p>
+              <p class="text-red-600 font-semibold">价格: ${purchase.price} 积分</p>
             </div>
-            <button class="btn btn-primary btn-sm view-purchase-details" data-id="${purchase.id}">
-              <i class="fa fa-eye"></i> 查看详情
+            <button class="btn btn-primary btn-sm view-purchase-details bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition duration-300" data-id="${purchase.id}">
+              <i class="fa fa-eye mr-1"></i> 查看详情
             </button>
           </div>
         `;
         
-        purchasesList.appendChild(purchaseItem);
+        purchasesContainer.appendChild(purchaseItem);
         
         // 绑定查看详情事件
         purchaseItem.querySelector('.view-purchase-details').addEventListener('click', async (e) => {
@@ -1764,11 +1832,13 @@
     function renderEmptyPurchasesList() {
       const purchasesList = document.getElementById('purchases-list');
       purchasesList.innerHTML = `
-        <div class="empty-state">
-          <i class="fa fa-shopping-cart"></i>
+        <div class="empty-state text-center py-8">
+          <i class="fa fa-shopping-cart text-gray-300 text-4xl mb-4"></i>
           <h3>暂无购买记录</h3>
-          <p>您还没有购买任何账号</p>
-          <button class="btn btn-primary mt-4" onclick="closePurchasesModal()">去商城购买</button>
+          <p class="text-gray-500">您还没有购买任何账号</p>
+          <button class="btn btn-primary mt-4 hover:bg-blue-600 transition duration-300" onclick="closePurchasesModal()">
+            <i class="fa fa-shopping-bag mr-2"></i>去商城购买
+          </button>
         </div>
       `;
     }
@@ -1776,6 +1846,27 @@
     // 查看购买详情
      async function viewPurchaseDetails(purchaseId, purchase) {
        try {
+         // 显示加载中状态
+         const loadingIndicator = document.createElement('div');
+         loadingIndicator.className = 'loading-overlay';
+         loadingIndicator.style.position = 'fixed';
+         loadingIndicator.style.top = '0';
+         loadingIndicator.style.left = '0';
+         loadingIndicator.style.width = '100%';
+         loadingIndicator.style.height = '100%';
+         loadingIndicator.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+         loadingIndicator.style.display = 'flex';
+         loadingIndicator.style.justifyContent = 'center';
+         loadingIndicator.style.alignItems = 'center';
+         loadingIndicator.style.zIndex = '9999';
+         loadingIndicator.innerHTML = `
+           <div class="bg-white p-4 rounded-lg flex items-center">
+             <div class="animate-spin rounded-full h-8 w-8 border-4 border-gray-200 border-t-blue-500 mr-3"></div>
+             <span>加载详情中...</span>
+           </div>
+         `;
+         document.body.appendChild(loadingIndicator);
+         
          // 从Supabase获取账号详情
          const { data: account, error } = await supabaseClient
            .from('accounts')
@@ -1783,18 +1874,27 @@
            .eq('id', purchase.account_id || purchaseId)
            .single();
          
+         // 移除加载指示器
+         document.body.removeChild(loadingIndicator);
+         
          if (error) {
            console.error('获取账号详情失败:', error);
            // 使用模拟数据
            showPurchaseDetailsModal(getMockAccountDetails(purchase));
+           showToast('无法获取账号详情，显示示例数据', 'info');
            return;
          }
          
          showPurchaseDetailsModal(account);
        } catch (error) {
          console.error('查看购买详情失败:', error);
+         // 确保移除加载指示器
+         const loadingIndicator = document.querySelector('.loading-overlay');
+         if (loadingIndicator) document.body.removeChild(loadingIndicator);
+         
          // 使用模拟数据
          showPurchaseDetailsModal(getMockAccountDetails(purchase));
+         showToast('加载失败，显示示例数据', 'error');
        }
      }
      
@@ -1808,9 +1908,12 @@
          email_password: 'EmailPass456!',
          level: 50,
          character_count: 10,
+         game_currency: '10000金币',
+         game_stamina: '100体力',
+         game_weight: '200背包容量',
          price: purchase.price || 500,
          game_type: '角色扮演',
-         description: '这是一个高等级测试账号，包含多个角色和丰富的游戏道具。'
+         description: '这是一个高等级测试账号，包含多个角色和丰富的游戏道具。账号已解锁全部游戏内容，拥有稀有装备和坐骑。'
        };
      }
      
